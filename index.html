@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>KeenOnCoins — Capture & Clean</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span>Keen</span><b>On</b><span>Coins</span></div>
+    <div class="title"><strong>Capture &amp; Clean</strong><small>Pixel-preserving coin image rebuild prototype</small></div>
+    <div class="badge"><strong>PROTOTYPE</strong><span>No database · Runs in browser</span></div>
+  </header>
+
+  <main>
+    <section class="workspace">
+      <article class="panel source-panel">
+        <div class="panel-head"><h2>1. Original Coin</h2><span class="status" id="sourceStatus">Waiting</span></div>
+        <div class="source-stage" id="sourceStage">
+          <div class="empty"><div class="coin-icon">◉</div><strong>Upload a coin photograph</strong><span>or use your USB microscope / webcam</span></div>
+          <img id="sourceImage" alt="Original coin" hidden />
+          <video id="camera" autoplay playsinline muted hidden></video>
+          <canvas id="cameraCanvas" hidden></canvas>
+          <div class="guide" hidden id="guide"><i></i></div>
+        </div>
+        <div class="controls">
+          <label class="button secondary upload">Choose Image<input id="fileInput" type="file" accept="image/*" /></label>
+          <button class="button secondary" id="cameraButton">Use Camera</button>
+          <button class="button primary" id="captureButton" disabled>Capture</button>
+        </div>
+        <div class="camera-row" id="cameraRow" hidden>
+          <select id="cameraSelect"><option>Detecting cameras…</option></select>
+          <button class="button small" id="stopCamera">Stop</button>
+        </div>
+      </article>
+
+      <article class="panel process-panel">
+        <div class="panel-head"><h2>2. Rebuild</h2><span class="status" id="processStatus">Ready</span></div>
+        <div class="process-card">
+          <button class="button process" id="processButton" disabled><span>✦</span> Clean &amp; Extract Coin</button>
+          <div class="steps" id="steps">
+            <div data-step="detect"><i>1</i><span>Detecting coin</span></div>
+            <div data-step="boundary"><i>2</i><span>Finding physical boundary</span></div>
+            <div data-step="geometry"><i>3</i><span>Correcting geometry</span></div>
+            <div data-step="pixels"><i>4</i><span>Rebuilding from source pixels</span></div>
+            <div data-step="background"><i>5</i><span>Removing background</span></div>
+            <div data-step="png"><i>6</i><span>Creating transparent PNG</span></div>
+          </div>
+        </div>
+        <div class="integrity">
+          <strong>Source fidelity protected</strong>
+          <span>No invented lettering, dates, portraits or surface detail. The rebuild is based on the captured pixels.</span>
+        </div>
+      </article>
+
+      <article class="panel result-panel">
+        <div class="panel-head"><h2>3. Cleaned Result</h2><span class="status success" id="resultStatus">Transparent PNG</span></div>
+        <div class="result-stage checker" id="resultStage">
+          <div class="empty"><div class="coin-icon">✦</div><strong>Your cleaned coin appears here</strong><span>True alpha transparency outside the coin</span></div>
+          <canvas id="resultCanvas" hidden></canvas>
+        </div>
+        <div class="result-controls">
+          <button class="button secondary" id="downloadButton" disabled>⇩ Download PNG</button>
+          <button class="button secondary" id="compareButton" disabled>⇄ Compare</button>
+        </div>
+      </article>
+    </section>
+
+    <section class="bottom">
+      <div class="sample-head"><strong>Quick tests</strong><span>Try one of the built-in synthetic coin examples</span></div>
+      <div class="samples">
+        <button class="sample" data-sample="dark"><span class="sample-coin dark">✦</span><b>Dark coin</b></button>
+        <button class="sample" data-sample="gold"><span class="sample-coin gold">♔</span><b>Gold coin</b></button>
+        <button class="sample" data-sample="silver"><span class="sample-coin silver">✣</span><b>Silver coin</b></button>
+      </div>
+      <div class="tip"><strong>Setup tip</strong><span>Use fixed lighting, a high-contrast background and keep the coin flat under the microscope. The better the source image, the more faithfully the pixel rebuild can preserve it.</span></div>
+    </section>
+  </main>
+
+  <div class="compare-modal" id="compareModal" hidden>
+    <div class="modal">
+      <div class="modal-head"><strong>Original vs cleaned</strong><button id="closeCompare">×</button></div>
+      <div class="compare-grid"><div><small>ORIGINAL</small><img id="compareOriginal" /></div><div><small>CLEANED PNG</small><div class="checker compare-result"><img id="compareResult" /></div></div></div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
