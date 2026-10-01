@@ -1,0 +1,14 @@
+KEENONCOINS SILVER QUICK ADD
+
+This is a browser-ready copy of the private Silver Quick Add app.
+
+IMPORTANT:
+On iPhone, do NOT rely on the Files app's document preview.
+Open index.html in a real browser (Safari/Chrome), or upload the folder to
+GitHub Pages / another static web host.
+
+The app connects to the existing SWISH/OnSpace backend. It does not create
+a new database.
+
+If the page still does not load, the page will now show a visible startup
+error instead of a black screen.
