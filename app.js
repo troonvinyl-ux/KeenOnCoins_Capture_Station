@@ -1,13 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// ============================================================
-// KEENONCOINS — SILVER CAPTURE STATION
-// Uses the EXISTING SWISH / OnSpace backend.
-// No second database.
-// ============================================================
-
 const CONFIG = {
-  SUPABASE_URL: "https://iwgaqieyoahmcjfziwga.backend.onspace.ai",
+  SUPABASE_URL:
+    "https://iwgaqieyoahmcjfziwga.backend.onspace.ai",
 
   SUPABASE_ANON_KEY:
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3ODkwNjM4MTgsImV4cCI6MjEwNDQyMzgxOCwicmVmIjoiaXdnYXFpZXlvYWhtY2pmeml3Z2EiLCJyb2xlIjoiYW5vbiIsImlzcyI6Im9uc3BhY2UifQ.cioQ38guPLFAbl3x48mUaJcMSxU5IpZn7-H-JhtvXJc",
@@ -29,10 +24,6 @@ const supabase = createClient(
   }
 );
 
-// ============================================================
-// HELPERS
-// ============================================================
-
 const $ = id => document.getElementById(id);
 
 const state = {
@@ -47,47 +38,31 @@ const state = {
   busy: false
 };
 
-// IMPORTANT:
-// The current HTML does not contain an element called #status.
-// The old function therefore crashed when Connect was pressed.
-// This version safely updates the UI without requiring #status.
+/* =========================================================
+   UI
+========================================================= */
 
 function setStatus(message) {
   const status = $("status");
 
   if (status) {
     status.textContent = message;
-    return;
   }
 
-  const connectButton = $("swishConnect");
+  const button = $("swishConnect");
 
-  if (connectButton) {
-    connectButton.dataset.status = message;
-
-    if (!state.connected) {
-      connectButton.title = message;
-    }
-  }
-
-  const cameraMessage = $("cameraMessage");
-
-  if (
-    cameraMessage &&
-    (
-      message.includes("Camera") ||
-      message.includes("connected") ||
-      message.includes("captured") ||
-      message.includes("failed")
-    )
-  ) {
-    cameraMessage.textContent = message;
+  if (button) {
+    button.dataset.status = message;
+    button.title = message;
   }
 }
 
 function setMessage(message) {
-  const el = $("cameraMessage");
-  if (el) el.textContent = message;
+  const element = $("cameraMessage");
+
+  if (element) {
+    element.textContent = message;
+  }
 }
 
 function setBusy(value) {
@@ -100,14 +75,15 @@ function setBusy(value) {
     "capture",
     "startCamera"
   ].forEach(id => {
-    const el = $(id);
+    const element = $(id);
 
-    if (!el) return;
+    if (!element) return;
 
     if (id === "capture") {
-      el.disabled = value || !state.stream;
+      element.disabled =
+        value || !state.stream;
     } else {
-      el.disabled = value;
+      element.disabled = value;
     }
   });
 }
@@ -117,11 +93,15 @@ function setConnectionText() {
 
   if (!button) return;
 
-  button.textContent = state.connected
-    ? "SWISH connected"
-    : "Connect SWISH";
+  button.textContent =
+    state.connected
+      ? "SWISH connected"
+      : "Connect SWISH";
 
-  button.classList.toggle("connected", state.connected);
+  button.classList.toggle(
+    "connected",
+    state.connected
+  );
 }
 
 function showLogin(show = true) {
@@ -129,7 +109,10 @@ function showLogin(show = true) {
 
   if (!panel) return;
 
-  panel.classList.toggle("hidden", !show);
+  panel.classList.toggle(
+    "hidden",
+    !show
+  );
 
   if (show) {
     setTimeout(() => {
@@ -138,54 +121,91 @@ function showLogin(show = true) {
   }
 }
 
-function showError(title, message, detail = "") {
+function showError(
+  title,
+  message,
+  detail = ""
+) {
   const panel = $("errorPanel");
 
   if (!panel) {
-    alert(`${title}\n\n${message}`);
+    alert(
+      `${title}\n\n${message}`
+    );
     return;
   }
 
-  $("errorTitle").textContent = title;
-  $("errorMessage").textContent = message;
-  $("errorDetail").textContent = detail;
+  const titleElement =
+    $("errorTitle");
 
-  panel.classList.remove("hidden");
+  const messageElement =
+    $("errorMessage");
+
+  const detailElement =
+    $("errorDetail");
+
+  if (titleElement)
+    titleElement.textContent = title;
+
+  if (messageElement)
+    messageElement.textContent = message;
+
+  if (detailElement)
+    detailElement.textContent = detail;
+
+  panel.classList.remove(
+    "hidden"
+  );
 }
 
 function clearError() {
-  $("errorPanel")?.classList.add("hidden");
+  $("errorPanel")
+    ?.classList.add("hidden");
 }
 
-// ============================================================
-// FUNCTION ERROR READER
-// ============================================================
+/* =========================================================
+   ERROR READING
+========================================================= */
 
-async function readableFunctionError(error) {
-  let message = error?.message || "SWISH function failed";
+async function readableFunctionError(
+  error
+) {
+  let message =
+    error?.message ||
+    "SWISH function failed";
+
   let detail = "";
 
   try {
     if (error?.context) {
-      detail = await error.context.clone().text();
+      detail =
+        await error.context
+          .clone()
+          .text();
 
       if (detail) {
         try {
-          const json = JSON.parse(detail);
+          const json =
+            JSON.parse(detail);
 
           message =
             json.error ||
             json.message ||
             message;
 
-          detail = JSON.stringify(json, null, 2);
+          detail =
+            JSON.stringify(
+              json,
+              null,
+              2
+            );
         } catch {
-          // Response was not JSON.
+          // Not JSON.
         }
       }
     }
   } catch {
-    // Keep original error.
+    // Keep original message.
   }
 
   return {
@@ -194,15 +214,16 @@ async function readableFunctionError(error) {
   };
 }
 
-// ============================================================
-// TENANT / SWISH CONNECTION
-// ============================================================
+/* =========================================================
+   SWISH / TENANT
+========================================================= */
 
 async function getTenant() {
   const {
     data: { user },
     error: userError
-  } = await supabase.auth.getUser();
+  } =
+    await supabase.auth.getUser();
 
   if (userError) {
     throw new Error(
@@ -210,18 +231,24 @@ async function getTenant() {
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   const {
     data,
     error
-  } = await supabase
-    .from("tenants")
-    .select("id,name")
-    .order("created_at", {
-      ascending: true
-    })
-    .limit(1);
+  } =
+    await supabase
+      .from("tenants")
+      .select("id,name")
+      .order(
+        "created_at",
+        {
+          ascending: true
+        }
+      )
+      .limit(1);
 
   if (error) {
     throw new Error(
@@ -234,11 +261,15 @@ async function getTenant() {
 
 async function loadConnection() {
   try {
-    setStatus("Checking SWISH connection…");
+    setStatus(
+      "Checking SWISH connection…"
+    );
 
     const {
       data: { session }
-    } = await supabase.auth.getSession();
+    } =
+      await supabase.auth
+        .getSession();
 
     if (!session?.user) {
       state.connected = false;
@@ -246,16 +277,20 @@ async function loadConnection() {
       state.tenantId = null;
 
       setConnectionText();
-      setStatus("Connect SWISH");
+      setStatus(
+        "Connect SWISH"
+      );
 
       updateButtons();
 
       return false;
     }
 
-    state.user = session.user;
+    state.user =
+      session.user;
 
-    const tenant = await getTenant();
+    const tenant =
+      await getTenant();
 
     if (!tenant) {
       throw new Error(
@@ -263,12 +298,16 @@ async function loadConnection() {
       );
     }
 
-    state.tenantId = tenant.id;
+    state.tenantId =
+      tenant.id;
+
     state.connected = true;
 
     setConnectionText();
 
-    setStatus("SWISH connected · Ready");
+    setStatus(
+      "SWISH connected · Ready"
+    );
 
     showLogin(false);
 
@@ -278,18 +317,24 @@ async function loadConnection() {
 
   } catch (error) {
 
-    console.error("SWISH connection error:", error);
+    console.error(
+      "SWISH connection error:",
+      error
+    );
 
     state.connected = false;
     state.tenantId = null;
 
     setConnectionText();
 
-    setStatus("SWISH connection needs attention");
+    setStatus(
+      "SWISH connection needs attention"
+    );
 
     showError(
       "SWISH connection",
-      error.message || String(error)
+      error.message ||
+        String(error)
     );
 
     updateButtons();
@@ -298,11 +343,13 @@ async function loadConnection() {
   }
 }
 
-// ============================================================
-// CONNECT BUTTON
-// ============================================================
+/* =========================================================
+   TOP CONNECT BUTTON
+========================================================= */
 
-async function connectSwish(event) {
+async function connectSwish(
+  event
+) {
   event?.preventDefault?.();
   event?.stopPropagation?.();
 
@@ -311,7 +358,8 @@ async function connectSwish(event) {
   if (state.connected) {
 
     try {
-      await supabase.auth.signOut();
+      await supabase.auth
+        .signOut();
     } catch (error) {
       console.error(error);
     }
@@ -333,21 +381,40 @@ async function connectSwish(event) {
   showLogin(true);
 }
 
-// ============================================================
-// LOGIN
-// ============================================================
+/* =========================================================
+   LOGIN
+========================================================= */
 
-async function login(event) {
+async function login(
+  event
+) {
   event?.preventDefault?.();
   event?.stopPropagation?.();
+
+  /*
+    TEMPORARY DIAGNOSTIC.
+
+    When you press Connect inside the login panel,
+    this proves the iPhone is actually firing the
+    login event.
+
+    Once confirmed, we remove this alert.
+  */
+
+  alert(
+    "SWISH login button received"
+  );
 
   clearError();
 
   const email =
-    $("loginEmail")?.value.trim() || "";
+    $("loginEmail")
+      ?.value
+      .trim() || "";
 
   const password =
-    $("loginPassword")?.value || "";
+    $("loginPassword")
+      ?.value || "";
 
   if (!email || !password) {
     showError(
@@ -358,52 +425,70 @@ async function login(event) {
     return;
   }
 
-  const button = $("loginBtn");
+  const button =
+    $("loginBtn");
 
-  // Immediate feedback on iPhone.
   if (button) {
     button.disabled = true;
-    button.textContent = "Connecting…";
+    button.textContent =
+      "Connecting…";
   }
 
-  setStatus("SWISH · Signing in…");
+  setStatus(
+    "SWISH · Signing in…"
+  );
 
   try {
 
-    const result = await Promise.race([
+    const result =
+      await Promise.race([
 
-      supabase.auth.signInWithPassword({
-        email,
-        password
-      }),
+        supabase.auth
+          .signInWithPassword({
+            email,
+            password
+          }),
 
-      new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(
-            new Error(
-              "SWISH sign-in timed out after 15 seconds. Check your internet connection and try again."
-            )
-          );
-        }, 15000);
-      })
+        new Promise(
+          (_, reject) => {
+            setTimeout(
+              () => {
+                reject(
+                  new Error(
+                    "SWISH sign-in timed out after 15 seconds. Check your internet connection and try again."
+                  )
+                );
+              },
+              15000
+            );
+          }
+        )
 
-    ]);
+      ]);
 
     if (result?.error) {
       throw result.error;
     }
 
-    const connected = await loadConnection();
+    const connected =
+      await loadConnection();
 
     if (!connected) {
       return;
     }
 
-    $("loginPassword").value = "";
+    const passwordInput =
+      $("loginPassword");
+
+    if (passwordInput) {
+      passwordInput.value = "";
+    }
 
     showLogin(false);
 
-    setStatus("SWISH connected · Ready");
+    setStatus(
+      "SWISH connected · Ready"
+    );
 
   } catch (error) {
 
@@ -414,57 +499,68 @@ async function login(event) {
 
     showError(
       "SWISH login failed",
-      error.message || String(error),
-      "If the email and password are correct, this indicates a SWISH authentication/backend connection problem."
+      error.message ||
+        String(error),
+      "The login request was sent but SWISH did not authenticate the account."
     );
 
-    setStatus("Login failed");
+    setStatus(
+      "Login failed"
+    );
 
   } finally {
 
     if (button) {
       button.disabled = false;
-      button.textContent = "Connect";
+      button.textContent =
+        "Connect";
     }
 
     updateButtons();
   }
 }
 
-// ============================================================
-// CAMERA
-// ============================================================
+/* =========================================================
+   CAMERA
+========================================================= */
 
 async function startCamera() {
   clearError();
 
   try {
 
-    if (!navigator.mediaDevices?.getUserMedia) {
+    if (
+      !navigator
+        .mediaDevices
+        ?.getUserMedia
+    ) {
       throw new Error(
         "Camera API unavailable in this browser."
       );
     }
 
     state.stream =
-      await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: {
-            ideal: "environment"
+      await navigator.mediaDevices
+        .getUserMedia({
+          video: {
+            facingMode: {
+              ideal: "environment"
+            },
+            width: {
+              ideal: 1920
+            },
+            height: {
+              ideal: 1080
+            }
           },
-          width: {
-            ideal: 1920
-          },
-          height: {
-            ideal: 1080
-          }
-        },
-        audio: false
-      });
+          audio: false
+        });
 
-    const camera = $("camera");
+    const camera =
+      $("camera");
 
-    camera.srcObject = state.stream;
+    camera.srcObject =
+      state.stream;
 
     await camera.play();
 
@@ -494,25 +590,32 @@ async function startCamera() {
       "Camera unavailable — use Photo instead"
     );
 
-    setStatus("Photo mode");
+    setStatus(
+      "Photo mode"
+    );
 
     showError(
       "Camera unavailable",
-      error.message || String(error),
+      error.message ||
+        String(error),
       "You can still use Photo to capture each side."
     );
   }
 }
 
-// ============================================================
-// CAPTURE
-// ============================================================
+/* =========================================================
+   CAPTURE
+========================================================= */
 
 function makeCapture() {
-  const video = $("camera");
-  const canvas = $("canvas");
+  const video =
+    $("camera");
+
+  const canvas =
+    $("canvas");
 
   if (!video?.videoWidth) {
+
     showError(
       "Camera not ready",
       "Start the camera before pressing Capture."
@@ -521,8 +624,11 @@ function makeCapture() {
     return null;
   }
 
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+  canvas.width =
+    video.videoWidth;
+
+  canvas.height =
+    video.videoHeight;
 
   const context =
     canvas.getContext("2d");
@@ -544,13 +650,19 @@ function makeCapture() {
 function storeShot(data) {
   if (!data) return;
 
-  if (state.side === "obverse") {
+  if (
+    state.side ===
+    "obverse"
+  ) {
 
-    state.obverse = data;
+    state.obverse =
+      data;
 
-    $("obversePreview").src = data;
+    $("obversePreview").src =
+      data;
 
-    state.side = "reverse";
+    state.side =
+      "reverse";
 
     $("sideLabel").textContent =
       "REVERSE";
@@ -560,11 +672,14 @@ function storeShot(data) {
 
   } else {
 
-    state.reverse = data;
+    state.reverse =
+      data;
 
-    $("reversePreview").src = data;
+    $("reversePreview").src =
+      data;
 
-    state.side = "obverse";
+    state.side =
+      "obverse";
 
     $("sideLabel").textContent =
       "OBVERSE";
@@ -573,7 +688,8 @@ function storeShot(data) {
       "Switch to reverse";
   }
 
-  $("nextSide").disabled = false;
+  $("nextSide").disabled =
+    false;
 
   updateButtons();
 
@@ -590,13 +706,15 @@ function storeShot(data) {
 
   } else {
 
-    setStatus("Side captured");
+    setStatus(
+      "Side captured"
+    );
   }
 }
 
-// ============================================================
-// COIN DETAILS
-// ============================================================
+/* =========================================================
+   DETAILS
+========================================================= */
 
 function details() {
   return {
@@ -611,10 +729,13 @@ function details() {
       ) || null,
 
     metal:
-      $("metal")?.value || "Unknown",
+      $("metal")?.value ||
+      "Unknown",
 
     notes:
-      $("notes")?.value.trim() || ""
+      $("notes")
+        ?.value
+        .trim() || ""
   };
 }
 
@@ -626,19 +747,27 @@ function imageList() {
 }
 
 function knownAttributes() {
-  const d = details();
+  const d =
+    details();
 
   return {
-    weight: d.weight_g,
-    diameter: d.diameter_mm,
-    material: d.metal,
-    customNotes: d.notes
+    weight:
+      d.weight_g,
+
+    diameter:
+      d.diameter_mm,
+
+    material:
+      d.metal,
+
+    customNotes:
+      d.notes
   };
 }
 
-// ============================================================
-// BUTTON STATES
-// ============================================================
+/* =========================================================
+   BUTTON STATES
+========================================================= */
 
 function updateButtons() {
 
@@ -648,80 +777,91 @@ function updateButtons() {
       state.reverse
     );
 
-  const identifyButton =
+  const identify =
     $("identify");
 
-  const valueButton =
-    $("value");
-
-  const saveButton =
-    $("save");
-
-  if (identifyButton) {
-    identifyButton.disabled =
+  if (identify) {
+    identify.disabled =
       state.busy ||
       !captured ||
       !state.connected;
   }
 
-  if (valueButton) {
-    valueButton.disabled =
+  const value =
+    $("value");
+
+  if (value) {
+    value.disabled =
       state.busy ||
-      !state.assessment?.rawIdentification ||
+      !state.assessment
+        ?.rawIdentification ||
       !state.connected;
   }
 
-  if (saveButton) {
-    saveButton.disabled =
+  const save =
+    $("save");
+
+  if (save) {
+    save.disabled =
       state.busy ||
-      !state.assessment?.rawIdentification ||
+      !state.assessment
+        ?.rawIdentification ||
       !state.connected;
   }
 
-  const captureButton =
+  const capture =
     $("capture");
 
-  if (captureButton) {
-    captureButton.disabled =
+  if (capture) {
+    capture.disabled =
       state.busy ||
       !state.stream;
   }
 
-  const cameraButton =
+  const camera =
     $("startCamera");
 
-  if (cameraButton) {
-    cameraButton.disabled =
+  if (camera) {
+    camera.disabled =
       state.busy;
   }
 }
 
-// ============================================================
-// RESULT DISPLAY
-// ============================================================
+/* =========================================================
+   ASSESSMENT
+========================================================= */
 
 function renderAssessment() {
 
   const assessment =
-    state.assessment || {};
+    state.assessment ||
+    {};
 
   const identification =
-    assessment.rawIdentification
-      ?.identification || {};
+    assessment
+      .rawIdentification
+      ?.identification ||
+    {};
 
   const numista =
-    assessment.rawIdentification
-      ?.numistaVerification || {};
+    assessment
+      .rawIdentification
+      ?.numistaVerification ||
+    {};
 
   const resultBody =
     $("resultBody");
 
-  if (!resultBody) return;
+  if (!resultBody)
+    return;
 
-  resultBody.innerHTML = "";
+  resultBody.innerHTML =
+    "";
 
   const dl =
-    document.createElement("dl");
+    document.createElement(
+      "dl"
+    );
 
   const rows = [
 
@@ -759,9 +899,9 @@ function renderAssessment() {
 
     [
       "Reasoning",
-      assessment.reasoning || ""
+      assessment.reasoning ||
+        ""
     ]
-
   ];
 
   if (
@@ -787,16 +927,20 @@ function renderAssessment() {
     rows.push([
       "Numista match",
       `${numista.matchScore}/100 · ${
-        numista.status || "unknown"
+        numista.status ||
+        "unknown"
       }`
     ]);
   }
 
   if (
     Array.isArray(
-      identification.evidenceSupporting
+      identification
+        .evidenceSupporting
     ) &&
-    identification.evidenceSupporting.length
+    identification
+      .evidenceSupporting
+      .length
   ) {
 
     rows.push([
@@ -807,35 +951,44 @@ function renderAssessment() {
     ]);
   }
 
-  rows.forEach(([key, value]) => {
+  rows.forEach(
+    ([key, value]) => {
 
-    const dt =
-      document.createElement("dt");
+      const dt =
+        document.createElement(
+          "dt"
+        );
 
-    const dd =
-      document.createElement("dd");
+      const dd =
+        document.createElement(
+          "dd"
+        );
 
-    dt.textContent = key;
+      dt.textContent =
+        key;
 
-    dd.textContent =
-      value || "—";
+      dd.textContent =
+        value || "—";
 
-    dl.append(
-      dt,
-      dd
-    );
-  });
+      dl.append(
+        dt,
+        dd
+      );
+    }
+  );
 
-  resultBody.append(dl);
+  resultBody.append(
+    dl
+  );
 
   $("result")
     ?.classList
     .remove("hidden");
 }
 
-// ============================================================
-// IDENTIFICATION
-// ============================================================
+/* =========================================================
+   IDENTIFICATION
+========================================================= */
 
 async function identify() {
 
@@ -847,7 +1000,7 @@ async function identify() {
 
     showError(
       "Connect SWISH first",
-      "The capture is ready, but the SWISH identification engine requires your authenticated SWISH session."
+      "The capture is ready, but SWISH identification requires your authenticated SWISH session."
     );
 
     return;
@@ -878,23 +1031,26 @@ async function identify() {
       data,
       error
     } =
-      await supabase.functions.invoke(
-        CONFIG.IDENTIFY_FUNCTION,
-        {
-          body: {
-            images: imageList(),
+      await supabase.functions
+        .invoke(
+          CONFIG.IDENTIFY_FUNCTION,
+          {
+            body: {
 
-            specialistId:
-              "coins",
+              images:
+                imageList(),
 
-            tenantId:
-              state.tenantId,
+              specialistId:
+                "coins",
 
-            knownAttributes:
-              knownAttributes()
+              tenantId:
+                state.tenantId,
+
+              knownAttributes:
+                knownAttributes()
+            }
           }
-        }
-      );
+        );
 
     if (error) {
 
@@ -922,7 +1078,8 @@ async function identify() {
       data.identification;
 
     const numista =
-      data.numistaVerification || {};
+      data.numistaVerification ||
+      {};
 
     state.assessment = {
 
@@ -930,7 +1087,8 @@ async function identify() {
         data,
 
       identification:
-        identification.canonicalTitle ||
+        identification
+          .canonicalTitle ||
         identification
           .candidateIdentification
           ?.primaryCandidate ||
@@ -939,7 +1097,9 @@ async function identify() {
       confidence:
         Math.round(
           Number(
-            identification.confidence || 0
+            identification
+              .confidence ||
+            0
           ) * 100
         ),
 
@@ -953,11 +1113,13 @@ async function identify() {
         ),
 
       reasoning: [
-        identification.identificationState
+        identification
+          .identificationState
           ? `State: ${identification.identificationState}`
           : "",
 
-        identification.confidenceReason ||
+        identification
+          .confidenceReason ||
           "",
 
         numista.status
@@ -968,7 +1130,8 @@ async function identify() {
             }`
           : "",
 
-        ...(identification.warnings || [])
+        ...(identification
+          .warnings || [])
       ]
         .filter(Boolean)
         .join(" · ")
@@ -993,21 +1156,21 @@ async function identify() {
 
     showError(
       "SWISH identification failed",
-      error.message || String(error),
-      "The request reached the Capture Station, but SWISH did not return a usable identification. No coin was saved."
+      error.message ||
+        String(error),
+      "The request reached SWISH but no usable identification was returned. No coin was saved."
     );
 
   } finally {
 
     setBusy(false);
-
     updateButtons();
   }
 }
 
-// ============================================================
-// VALUATION
-// ============================================================
+/* =========================================================
+   VALUATION
+========================================================= */
 
 async function value() {
 
@@ -1039,70 +1202,83 @@ async function value() {
         .rawIdentification;
 
     const identification =
-      raw.identification || {};
+      raw.identification ||
+      {};
 
     const numista =
-      raw.numistaVerification || {};
+      raw.numistaVerification ||
+      {};
 
     const {
       data,
       error
     } =
-      await supabase.functions.invoke(
-        CONFIG.VALUE_FUNCTION,
-        {
-          body: {
+      await supabase.functions
+        .invoke(
+          CONFIG.VALUE_FUNCTION,
+          {
+            body: {
 
-            tenantId:
-              state.tenantId,
+              tenantId:
+                state.tenantId,
 
-            title:
-              identification.canonicalTitle ||
-              "Unknown coin",
+              title:
+                identification
+                  .canonicalTitle ||
+                "Unknown coin",
 
-            specialistId:
-              "coins",
+              specialistId:
+                "coins",
 
-            attributes: {
-              ...(identification.attributes || {}),
-              ...(identification.coinFields || {})
-            },
+              attributes: {
+                ...(identification
+                  .attributes || {}),
 
-            condition:
-              identification.condition ||
-              "Cannot be reliably graded from supplied images",
+                ...(identification
+                  .coinFields || {})
+              },
 
-            identificationConfidence:
-              Number(
-                identification.confidence || 0
-              ),
+              condition:
+                identification.condition ||
+                "Cannot be reliably graded from supplied images",
 
-            identificationTier:
-              identification.confidenceTier ||
-              "low",
+              identificationConfidence:
+                Number(
+                  identification
+                    .confidence ||
+                  0
+                ),
 
-            numistaTypeId:
-              identification.numistaTypeId ||
-              numista.typeId ||
-              null,
+              identificationTier:
+                identification
+                  .confidenceTier ||
+                "low",
 
-            numistaMatchScore:
-              Number(
-                numista.matchScore ||
-                identification.numistaMatchScore ||
-                0
-              ),
+              numistaTypeId:
+                identification
+                  .numistaTypeId ||
+                numista.typeId ||
+                null,
 
-            numistaMatchTier:
-              numista.status ||
-              identification.numistaStatus ||
-              "no_match",
+              numistaMatchScore:
+                Number(
+                  numista.matchScore ||
+                  identification
+                    .numistaMatchScore ||
+                  0
+                ),
 
-            applyToItem:
-              false
+              numistaMatchTier:
+                numista.status ||
+                identification
+                  .numistaStatus ||
+                "no_match",
+
+              applyToItem:
+                false
+            }
           }
-        }
-      );
+        );
 
     if (error) {
 
@@ -1126,22 +1302,26 @@ async function value() {
     const quickSaleValue =
       data.quickSaleValue ??
       data.quick_sale_value ??
-      data.valuation?.quickSaleValue ??
-      data.valuation?.quick_sale_value ??
-      data.valuation?.recommendedListingPrice ??
+      data.valuation
+        ?.quickSaleValue ??
+      data.valuation
+        ?.quick_sale_value ??
+      data.valuation
+        ?.recommendedListingPrice ??
       data.recommendedListingPrice ??
       null;
 
     state.assessment.valuation =
       data;
 
-    state.assessment.quick_sale_value =
+    state.assessment
+      .quick_sale_value =
       quickSaleValue;
 
     state.assessment.reasoning =
       (
-        state.assessment.reasoning ||
-        ""
+        state.assessment
+          .reasoning || ""
       ) +
       (
         quickSaleValue != null
@@ -1168,23 +1348,25 @@ async function value() {
 
     showError(
       "SWISH valuation failed",
-      error.message || String(error),
+      error.message ||
+        String(error),
       "Identification has not been altered. Nothing was saved."
     );
 
   } finally {
 
     setBusy(false);
-
     updateButtons();
   }
 }
 
-// ============================================================
-// IMAGE UPLOAD
-// ============================================================
+/* =========================================================
+   IMAGE UPLOAD
+========================================================= */
 
-async function uploadImages(itemId) {
+async function uploadImages(
+  itemId
+) {
 
   const urls = [];
 
@@ -1218,7 +1400,9 @@ async function uploadImages(itemId) {
       error
     } =
       await supabase.storage
-        .from(CONFIG.IMAGE_BUCKET)
+        .from(
+          CONFIG.IMAGE_BUCKET
+        )
         .upload(
           path,
           blob,
@@ -1236,20 +1420,26 @@ async function uploadImages(itemId) {
 
     const publicUrl =
       supabase.storage
-        .from(CONFIG.IMAGE_BUCKET)
-        .getPublicUrl(path)
+        .from(
+          CONFIG.IMAGE_BUCKET
+        )
+        .getPublicUrl(
+          path
+        )
         .data
         .publicUrl;
 
-    urls.push(publicUrl);
+    urls.push(
+      publicUrl
+    );
   }
 
   return urls;
 }
 
-// ============================================================
-// SAVE TO SWISH
-// ============================================================
+/* =========================================================
+   SAVE
+========================================================= */
 
 async function save() {
 
@@ -1281,27 +1471,33 @@ async function save() {
         .rawIdentification;
 
     const identification =
-      raw.identification || {};
+      raw.identification ||
+      {};
 
     const valuation =
       state.assessment
-        .valuation || {};
+        .valuation ||
+      {};
 
     const d =
       details();
 
     const attributes = {
 
-      ...(identification.attributes || {}),
+      ...(identification
+        .attributes || {}),
 
-      ...(identification.coinFields || {}),
+      ...(identification
+        .coinFields || {}),
 
       object_type:
-        identification.objectType ||
+        identification
+          .objectType ||
         "coin",
 
       identification_state:
-        identification.identificationState ||
+        identification
+          .identificationState ||
         "observation_only",
 
       weight_g:
@@ -1317,18 +1513,24 @@ async function save() {
         d.notes,
 
       numista_type_id:
-        identification.numistaTypeId ||
-        raw.numistaVerification?.typeId ||
+        identification
+          .numistaTypeId ||
+        raw.numistaVerification
+          ?.typeId ||
         null,
 
       numista_n:
-        identification.numistaN ||
-        raw.numistaVerification?.numistaN ||
+        identification
+          .numistaN ||
+        raw.numistaVerification
+          ?.numistaN ||
         null,
 
       numista_url:
-        identification.numistaUrl ||
-        raw.numistaVerification?.numistaUrl ||
+        identification
+          .numistaUrl ||
+        raw.numistaVerification
+          ?.numistaUrl ||
         null
     };
 
@@ -1344,7 +1546,8 @@ async function save() {
             state.tenantId,
 
           canonical_title:
-            identification.canonicalTitle ||
+            identification
+              .canonicalTitle ||
             "Unidentified coin",
 
           description:
@@ -1357,54 +1560,68 @@ async function save() {
 
           status:
             (
-              identification.identificationState ===
+              identification
+                .identificationState ===
                 "observation_only" ||
               Number(
-                identification.confidence || 0
+                identification
+                  .confidence ||
+                0
               ) < 0.30
             )
               ? "review_required"
               : Number(
-                  identification.confidence || 0
+                  identification
+                    .confidence ||
+                  0
                 ) >= 0.80
                 ? "identified"
                 : "review_required",
 
           disposition_decision:
-            identification.dispositionDecision ||
+            identification
+              .dispositionDecision ||
             "sell_individual",
 
           condition:
-            identification.condition ||
+            identification
+              .condition ||
             "Cannot be reliably graded from supplied images",
 
           condition_grade:
-            identification.conditionGrade ||
+            identification
+              .conditionGrade ||
             "",
 
           condition_notes:
-            identification.conditionNotes ||
+            identification
+              .conditionNotes ||
             "",
 
           identification_confidence:
             Number(
-              identification.confidence || 0
+              identification
+                .confidence ||
+              0
             ),
 
           identification_source:
-            identification.identificationSource ||
+            identification
+              .identificationSource ||
             "researched",
 
           valuation_low:
             Number(
-              valuation.valuationLow ??
+              valuation
+                .valuationLow ??
               valuation.low ??
               0
             ),
 
           valuation_mid:
             Number(
-              valuation.valuationMid ??
+              valuation
+                .valuationMid ??
               valuation.mid ??
               state.assessment
                 .quick_sale_value ??
@@ -1413,18 +1630,21 @@ async function save() {
 
           valuation_high:
             Number(
-              valuation.valuationHigh ??
+              valuation
+                .valuationHigh ??
               valuation.high ??
               0
             ),
 
           valuation_confidence:
-            valuation.valuationConfidence ||
+            valuation
+              .valuationConfidence ||
             "unknown",
 
           expected_selling_price:
             Number(
-              valuation.recommendedListingPrice ??
+              valuation
+                .recommendedListingPrice ??
               state.assessment
                 .quick_sale_value ??
               0
@@ -1438,7 +1658,8 @@ async function save() {
 
           sale_prob_30d:
             Number(
-              valuation.saleProb30d ??
+              valuation
+                .saleProb30d ??
               0
             ),
 
@@ -1448,9 +1669,11 @@ async function save() {
 
           warnings:
             Array.isArray(
-              identification.warnings
+              identification
+                .warnings
             )
-              ? identification.warnings
+              ? identification
+                  .warnings
               : [],
 
           tags: [],
@@ -1469,10 +1692,13 @@ async function save() {
     try {
 
       const urls =
-        await uploadImages(item.id);
+        await uploadImages(
+          item.id
+        );
 
       const {
-        error: imageUpdateError
+        error:
+          imageError
       } =
         await supabase
           .from("items")
@@ -1493,8 +1719,8 @@ async function save() {
             state.tenantId
           );
 
-      if (imageUpdateError) {
-        throw imageUpdateError;
+      if (imageError) {
+        throw imageError;
       }
 
     } catch (imageError) {
@@ -1513,7 +1739,8 @@ async function save() {
 
     alert(
       `Saved to SWISH\n\n${
-        identification.canonicalTitle ||
+        identification
+          .canonicalTitle ||
         "Unidentified coin"
       }`
     );
@@ -1531,156 +1758,259 @@ async function save() {
 
     showError(
       "SWISH save failed",
-      error.message || String(error),
-      "No separate database is being used. The existing SWISH database remains the source of truth."
+      error.message ||
+        String(error),
+      "The existing SWISH database remains the source of truth."
     );
 
   } finally {
 
     setBusy(false);
-
     updateButtons();
   }
 }
 
-// ============================================================
-// EVENT WIRING
-// ============================================================
+/* =========================================================
+   SAFE EVENT DELEGATION
+========================================================= */
 
-function wire(id, event, handler) {
+function installEventHandlers() {
 
-  const element =
-    $(id);
+  /*
+    IMPORTANT:
 
-  if (!element) {
-    console.warn(
-      `KeenOnCoins: element #${id} not found`
-    );
-    return;
-  }
+    We deliberately do NOT attach the login button using
+    element.onclick or a second touchend handler.
 
-  element.addEventListener(
-    event,
-    handler,
-    {
-      passive: false
-    }
-  );
-}
+    The document-level handler catches the tap even if
+    Safari changes the actual event target.
+  */
 
-function initialise() {
-
-  // IMPORTANT:
-  // Only ONE click handler for Connect.
-  // No duplicate touchend handler.
-
-  wire(
-    "swishConnect",
+  document.addEventListener(
     "click",
-    connectSwish
-  );
+    function(event) {
 
-  wire(
-    "loginBtn",
-    "click",
-    login
-  );
+      const target =
+        event.target;
 
-  wire(
-    "loginCancel",
-    "click",
-    () => showLogin(false)
-  );
+      if (!target) return;
 
-  wire(
-    "startCamera",
-    "click",
-    startCamera
-  );
-
-  wire(
-    "capture",
-    "click",
-    () => {
-
-      const data =
-        makeCapture();
-
-      if (data) {
-        storeShot(data);
-      }
-    }
-  );
-
-  wire(
-    "nextSide",
-    "click",
-    () => {
-
-      state.side =
-        state.side === "obverse"
-          ? "reverse"
-          : "obverse";
-
-      $("sideLabel").textContent =
-        state.side.toUpperCase();
-
-    }
-  );
-
-  wire(
-    "photoInput",
-    "change",
-    event => {
-
-      const file =
-        event.target.files?.[0];
-
-      if (!file) return;
-
-      const reader =
-        new FileReader();
-
-      reader.onload = () => {
-
-        storeShot(
-          reader.result
+      const loginButton =
+        target.closest(
+          "#loginBtn"
         );
 
-      };
+      if (loginButton) {
 
-      reader.readAsDataURL(file);
-    }
+        event.preventDefault();
+        event.stopPropagation();
+
+        login(event);
+
+        return;
+      }
+
+      const connectButton =
+        target.closest(
+          "#swishConnect"
+        );
+
+      if (connectButton) {
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        connectSwish(event);
+
+        return;
+      }
+
+      const cancelButton =
+        target.closest(
+          "#loginCancel"
+        );
+
+      if (cancelButton) {
+
+        event.preventDefault();
+
+        showLogin(false);
+
+        return;
+      }
+
+      const cameraButton =
+        target.closest(
+          "#startCamera"
+        );
+
+      if (cameraButton) {
+
+        event.preventDefault();
+
+        startCamera();
+
+        return;
+      }
+
+      const captureButton =
+        target.closest(
+          "#capture"
+        );
+
+      if (
+        captureButton &&
+        !captureButton.disabled
+      ) {
+
+        event.preventDefault();
+
+        const image =
+          makeCapture();
+
+        if (image) {
+          storeShot(image);
+        }
+
+        return;
+      }
+
+      const nextSide =
+        target.closest(
+          "#nextSide"
+        );
+
+      if (
+        nextSide &&
+        !nextSide.disabled
+      ) {
+
+        event.preventDefault();
+
+        state.side =
+          state.side ===
+          "obverse"
+            ? "reverse"
+            : "obverse";
+
+        $("sideLabel")
+          .textContent =
+          state.side
+            .toUpperCase();
+
+        return;
+      }
+
+      const identifyButton =
+        target.closest(
+          "#identify"
+        );
+
+      if (
+        identifyButton &&
+        !identifyButton.disabled
+      ) {
+
+        event.preventDefault();
+
+        identify();
+
+        return;
+      }
+
+      const valueButton =
+        target.closest(
+          "#value"
+        );
+
+      if (
+        valueButton &&
+        !valueButton.disabled
+      ) {
+
+        event.preventDefault();
+
+        value();
+
+        return;
+      }
+
+      const saveButton =
+        target.closest(
+          "#save"
+        );
+
+      if (
+        saveButton &&
+        !saveButton.disabled
+      ) {
+
+        event.preventDefault();
+
+        save();
+
+        return;
+      }
+
+      const retry =
+        target.closest(
+          "#retryConnection"
+        );
+
+      if (retry) {
+
+        event.preventDefault();
+
+        clearError();
+
+        loadConnection();
+
+        return;
+      }
+
+    },
+    false
   );
 
-  wire(
-    "identify",
-    "click",
-    identify
-  );
+  /*
+    File input still needs its change event.
+  */
 
-  wire(
-    "value",
-    "click",
-    value
-  );
+  const photoInput =
+    $("photoInput");
 
-  wire(
-    "save",
-    "click",
-    save
-  );
+  if (photoInput) {
 
-  wire(
-    "retryConnection",
-    "click",
-    () => {
+    photoInput.addEventListener(
+      "change",
+      event => {
 
-      clearError();
+        const file =
+          event.target
+            ?.files?.[0];
 
-      loadConnection();
-    }
-  );
+        if (!file) return;
+
+        const reader =
+          new FileReader();
+
+        reader.onload = () => {
+
+          storeShot(
+            reader.result
+          );
+        };
+
+        reader.readAsDataURL(
+          file
+        );
+      }
+    );
+  }
+
+  /*
+    Stop camera when leaving page.
+  */
 
   window.addEventListener(
     "beforeunload",
@@ -1695,25 +2025,40 @@ function initialise() {
     }
   );
 
-  supabase.auth.onAuthStateChange(
-    () => {
+  /*
+    Keep SWISH authentication state
+    synchronised.
+  */
 
-      setTimeout(
-        loadConnection,
-        0
-      );
-    }
+  supabase.auth
+    .onAuthStateChange(
+      () => {
+
+        setTimeout(
+          loadConnection,
+          0
+        );
+      }
+    );
+}
+
+/* =========================================================
+   START
+========================================================= */
+
+function initialise() {
+
+  console.log(
+    "KeenOnCoins Capture Station starting…"
   );
+
+  installEventHandlers();
 
   loadConnection()
     .finally(
       updateButtons
     );
 }
-
-// ============================================================
-// START APP
-// ============================================================
 
 if (
   document.readyState ===
