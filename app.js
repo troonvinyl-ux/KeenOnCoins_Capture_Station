@@ -78,21 +78,36 @@ async function connectSwish(){
   showLogin(true);
 }
 
-async function login(){
+async function login(ev){
+  ev?.preventDefault?.();
+  ev?.stopPropagation?.();
   clearError();
-  const email=$("loginEmail").value.trim(), password=$("loginPassword").value;
-  if(!email||!password){ showError("Login required","Enter your SWISH email and password.");return; }
-  setBusy(true); setStatus("SWISH · Signing in…");
+  const email=$("loginEmail")?.value.trim(), password=$("loginPassword")?.value;
+  if(!email||!password){ showError("Login required","Enter your SWISH email and password."); return; }
+
+  setStatus("SWISH · Signing in…");
+  const btn=$("loginBtn");
+  if(btn){ btn.disabled=true; btn.textContent="Connecting…"; }
+
   try{
-    const {error}=await supabase.auth.signInWithPassword({email,password});
-    if(error) throw error;
+    const result=await Promise.race([
+      supabase.auth.signInWithPassword({email,password}),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error("SWISH sign-in timed out after 15 seconds. Check your connection and try again.")),15000))
+    ]);
+    if(result?.error) throw result.error;
     const ok=await loadConnection();
     if(!ok) return;
     $("loginPassword").value="";
     showLogin(false);
     setStatus("SWISH connected · Ready");
-  }catch(e){ showError("SWISH login failed",e.message||String(e));setStatus("Login failed"); }
-  finally{setBusy(false);updateButtons();}
+  }catch(e){
+    console.error("SWISH login error",e);
+    showError("SWISH login failed",e.message||String(e),"If the details are correct, the next thing to check is the SWISH authentication/backend connection.");
+    setStatus("Login failed");
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent="Connect"; }
+    updateButtons();
+  }
 }
 
 async function startCamera(){
@@ -189,17 +204,29 @@ async function save(){
   finally{setBusy(false);updateButtons();}
 }
 
-$("swishConnect").onclick=connectSwish;
-$("loginBtn").onclick=login;
-$("loginCancel").onclick=()=>showLogin(false);
-$("startCamera").onclick=startCamera;
-$("capture").onclick=()=>{const d=makeCapture();if(d)storeShot(d);};
-$("nextSide").onclick=()=>{state.side=state.side==="obverse"?"reverse":"obverse";$("sideLabel").textContent=state.side.toUpperCase();};
-$("photoInput").onchange=e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>storeShot(r.result);r.readAsDataURL(f);};
-$("identify").onclick=identify;
-$("value").onclick=value;
-$("save").onclick=save;
-$("retryConnection").onclick=()=>{clearError();loadConnection();};
-window.addEventListener("beforeunload",()=>state.stream?.getTracks().forEach(t=>t.stop()));
-supabase.auth.onAuthStateChange(()=>setTimeout(loadConnection,0));
-loadConnection().finally(updateButtons);
+function wire(id,event,handler){
+  const el=$(id);
+  if(!el) return;
+  el.addEventListener(event,handler,{passive:false});
+}
+
+function initialise(){
+  wire("swishConnect","click",connectSwish);
+  wire("loginBtn","click",login);
+  wire("loginBtn","touchend",login);
+  wire("loginCancel","click",()=>showLogin(false));
+  wire("startCamera","click",startCamera);
+  wire("capture","click",()=>{const d=makeCapture();if(d)storeShot(d);});
+  wire("nextSide","click",()=>{state.side=state.side==="obverse"?"reverse":"obverse";$("sideLabel").textContent=state.side.toUpperCase();});
+  wire("photoInput","change",e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>storeShot(r.result);r.readAsDataURL(f);});
+  wire("identify","click",identify);
+  wire("value","click",value);
+  wire("save","click",save);
+  wire("retryConnection","click",()=>{clearError();loadConnection();});
+  window.addEventListener("beforeunload",()=>state.stream?.getTracks().forEach(t=>t.stop()));
+  supabase.auth.onAuthStateChange(()=>setTimeout(loadConnection,0));
+  loadConnection().finally(updateButtons);
+}
+
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",initialise,{once:true});
+else initialise();
