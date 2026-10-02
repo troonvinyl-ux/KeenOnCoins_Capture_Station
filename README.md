@@ -1,8 +1,9 @@
-# KeenOnCoins Silver Capture Station — SWISH Connected
+# SWISH Coin Dev Lab
 
-This version uses the existing SWISH OnSpace/Supabase backend.
+GitHub-ready web duplicate of the SWISH coin application.
 
-Flow:
-Capture obverse + reverse → authenticate to SWISH → swish-identify → Numista verification → swish-market-value → save to the existing `items` inventory.
+This is deliberately a development copy. Do not use it as a replacement for the production SWISH deployment.
 
-No second database is created.
+The project remains an Expo/React application and connects to the existing SWISH backend. GitHub Actions builds the web version and publishes it to GitHub Pages.
+
+See `GITHUB_WEB_APP.md` for the no-terminal setup.
