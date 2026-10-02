@@ -1,9 +1,12 @@
-# SWISH Coin Dev Lab
+# SWISH Web
 
-GitHub-ready web duplicate of the SWISH coin application.
+Standalone GitHub Pages version of the uploaded SWISH app.
 
-This is deliberately a development copy. Do not use it as a replacement for the production SWISH deployment.
+## Upload
+Upload `index.html` to the GitHub repository root. If GitHub Pages is enabled for the repository, it can be served directly without npm, Expo, Node or an OnSpace build.
 
-The project remains an Expo/React application and connects to the existing SWISH backend. GitHub Actions builds the web version and publishes it to GitHub Pages.
+## Backend
+This web copy points at the existing SWISH/OnSpace Supabase-compatible backend using the public anonymous key from the source project. No new database is created.
 
-See `GITHUB_WEB_APP.md` for the no-terminal setup.
+## Important
+The browser copy deliberately does not contain eBay client secrets, access tokens, refresh tokens, or other server credentials. Existing eBay OAuth/token-refresh and other privileged operations should continue through the project's existing server/Edge Functions rather than being moved into browser code.

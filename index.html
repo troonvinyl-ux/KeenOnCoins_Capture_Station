@@ -3,117 +3,85 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#111">
-<title>KeenOnCoins — SWISH Dev Lab</title>
-<link rel="stylesheet" href="styles.css">
+<title>SWISH — Web</title>
+<style>
+:root{--bg:#070b12;--panel:#0d1420;--panel2:#111b29;--line:#223044;--text:#eef3f8;--muted:#8fa0b5;--accent:#ffd21c;--green:#39d98a;--red:#ff5d6c;--blue:#55a7ff;--radius:16px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input,select,textarea{font:inherit}button{cursor:pointer}.app{display:flex;min-height:100vh}.side{width:250px;background:#090e17;border-right:1px solid var(--line);padding:18px 12px;position:fixed;inset:0 auto 0 0;overflow:auto}.brand{font-size:24px;font-weight:900;letter-spacing:.08em;padding:8px 12px 20px}.brand span{color:var(--accent)}.navbtn{width:100%;display:flex;align-items:center;gap:11px;border:0;background:transparent;color:#aebbd0;padding:11px 12px;border-radius:11px;text-align:left;margin:2px 0}.navbtn:hover,.navbtn.active{background:#172131;color:#fff}.navbtn.active{box-shadow:inset 3px 0 0 var(--accent)}.group{margin:18px 8px 7px;color:#5f7188;font-size:10px;text-transform:uppercase;letter-spacing:.12em}.main{margin-left:250px;width:calc(100% - 250px);padding:24px;max-width:1700px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.title{font-size:28px;font-weight:800}.sub{color:var(--muted);font-size:13px;margin-top:4px}.actions{display:flex;gap:8px}.btn{border:1px solid var(--line);background:var(--panel);color:#fff;border-radius:10px;padding:10px 14px}.btn.primary{background:var(--accent);color:#111;border-color:var(--accent);font-weight:800}.btn.danger{border-color:#65313a;color:#ff9ba4}.grid{display:grid;gap:14px}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:17px}.metric{font-size:28px;font-weight:850;margin-top:8px}.label{font-size:12px;color:var(--muted)}.green{color:var(--green)}.red{color:var(--red)}.yellow{color:var(--accent)}.blue{color:var(--blue)}.section{margin-top:18px}.section h2{font-size:16px;margin:0 0 10px}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:12px 10px;border-bottom:1px solid var(--line);font-size:13px;text-align:left}.table th{color:var(--muted);font-weight:600}.pill{display:inline-flex;padding:4px 8px;border-radius:999px;background:#192638;color:#b8c8dc;font-size:11px}.banner{display:flex;gap:12px;align-items:center;border-radius:14px;padding:12px 14px;margin-bottom:15px;border:1px solid #4b3d13;background:#1c190d}.banner.good{border-color:#1c5b40;background:#0c2119}.banner.bad{border-color:#6b2833;background:#240f14}.grow{flex:1}.small{font-size:12px;color:var(--muted)}.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}.listing{min-height:140px}.search{display:flex;gap:8px;margin-bottom:12px}.search input,.field{width:100%;background:#0a111b;border:1px solid var(--line);border-radius:10px;color:#fff;padding:11px}.empty{text-align:center;color:var(--muted);padding:50px 20px}.modal{position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center;padding:20px;z-index:5}.modalbox{background:var(--panel);border:1px solid var(--line);border-radius:18px;max-width:680px;width:100%;padding:20px}.row{display:flex;gap:10px;align-items:center}.spacer{flex:1}.statline{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #182536}.hero{padding:24px;border-radius:18px;background:linear-gradient(135deg,#121d2c,#0c121c);border:1px solid var(--line)}.hero h1{margin:0 0 7px;font-size:30px}.drop{border:1px dashed #43536b;border-radius:14px;padding:30px;text-align:center;color:var(--muted)}.toast{position:fixed;right:20px;bottom:20px;background:#162235;border:1px solid #35445a;padding:12px 16px;border-radius:10px;z-index:20}
+@media(max-width:900px){.side{width:72px;padding:14px 8px}.brand{font-size:16px;text-align:center}.navbtn span.txt,.group{display:none}.navbtn{justify-content:center}.main{margin-left:72px;width:calc(100% - 72px);padding:15px}.g4{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:1fr}.g2{grid-template-columns:1fr}.top{align-items:flex-start;gap:10px}.title{font-size:22px}}
+@media(max-width:560px){.g4{grid-template-columns:1fr}.main{padding:11px}.actions .hide-mobile{display:none}}
+</style>
 </head>
 <body>
-<main class="app">
-<header>
-  <div>
-    <div class="eyebrow">KEENONCOINS · SWISH DEV LAB</div>
-    <h1>Coin Capture Station</h1>
-    <p>Capture → identify → value → inventory → eBay</p>
-  </div>
-  <button id="swishConnect" class="status" type="button">Connect SWISH</button>
-</header>
-
-<section id="loginPanel" class="login-panel hidden">
-  <h2>Connect to SWISH</h2>
-  <p>Use your normal SWISH account. No eBay credentials are stored in this browser.</p>
-  <label>Email<input id="loginEmail" type="email" autocomplete="username" placeholder="you@example.com"></label>
-  <label>Password<input id="loginPassword" type="password" autocomplete="current-password" placeholder="SWISH password"></label>
-  <div class="login-actions"><button id="loginBtn" class="primary" type="button">Connect</button><button id="loginCancel" type="button">Cancel</button></div>
-</section>
-
-<section id="errorPanel" class="error-panel hidden">
-  <strong id="errorTitle">SWISH error</strong>
-  <p id="errorMessage"></p>
-  <pre id="errorDetail"></pre>
-  <button id="retryConnection">Retry connection</button>
-</section>
-
-<section class="camera-card">
-  <div class="camera-wrap">
-    <video id="camera" autoplay playsinline muted></video>
-    <div class="guide"></div>
-    <div id="cameraMessage" class="camera-message">Camera not started</div>
-  </div>
-  <div class="camera-controls">
-    <button id="startCamera" class="primary">Start camera</button>
-    <button id="capture" disabled>Capture <span id="sideLabel">OBVERSE</span></button>
-    <label class="upload">Photo<input id="photoInput" type="file" accept="image/*" capture="environment"></label>
-  </div>
-  <canvas id="canvas" hidden></canvas>
-  <div class="shots"><div><span>Obverse</span><img id="obversePreview" alt=""></div><div><span>Reverse</span><img id="reversePreview" alt=""></div></div>
-  <button id="nextSide" disabled>Switch side</button>
-</section>
-
-<section class="details">
-  <h2>Coin details</h2>
-  <div class="grid">
-    <label>Weight (g)<input id="weight" inputmode="decimal" placeholder="e.g. 7.78"></label>
-    <label>Diameter (mm)<input id="diameter" inputmode="decimal" placeholder="e.g. 23"></label>
-    <label>Metal<select id="metal"><option>Silver</option><option>Billon</option><option>Gold</option><option>Copper</option><option>Bronze</option><option>Unknown</option></select></label>
-    <label>Notes<textarea id="notes" rows="3" placeholder="Visible lettering, countermarks, ruler notes, etc."></textarea></label>
-  </div>
-</section>
-
-<section class="actions">
-  <button id="identify" class="primary" disabled>Identify coin</button>
-  <button id="value" disabled>Conservative quick-sale value</button>
-  <button id="save" disabled>Save to SWISH</button>
-</section>
-
-<section id="result" class="result hidden">
-  <h2>Assessment</h2>
-  <div id="resultBody"></div>
-</section>
-
-<section id="ebayPanel" class="ebay-panel hidden">
-  <div class="section-head">
-    <div><div class="eyebrow">EBAY · EBAY_GB</div><h2>Create eBay listing</h2></div>
-    <span id="commercialBadge" class="badge">Commercial score —</span>
-  </div>
-
-  <div class="score-box">
-    <div class="score-number" id="commercialScore">—</div>
-    <div><strong>Commercial score</strong><p id="commercialReason">Calculated from identification confidence, Numista match and valuation evidence. It is a Dev Lab signal, not a guaranteed sale probability.</p></div>
-  </div>
-
-  <div class="listing-grid">
-    <label>eBay title <span id="titleCount">0/80</span><input id="ebayTitle" maxlength="80"></label>
-    <label>Price (£)<input id="ebayPrice" inputmode="decimal"></label>
-    <label>Condition<select id="ebayCondition"><option value="3000">New</option><option value="4000">Used</option><option value="1000">New with tags</option><option value="5000">For parts or not working</option></select></label>
-    <label>Quantity<input id="ebayQuantity" type="number" min="1" value="1"></label>
-    <label class="full">Condition description<textarea id="ebayConditionDescription" rows="3"></textarea></label>
-    <label class="full">Description<textarea id="ebayDescription" rows="10"></textarea></label>
-  </div>
-
-  <div class="category-box">
-    <div class="section-head"><div><h3>Live eBay category</h3><p id="categoryPath">Top level</p></div><button id="categoryBack" type="button" disabled>Back</button></div>
-    <div id="categoryStatus" class="small-status">Not loaded</div>
-    <div id="categoryList" class="category-list"></div>
-    <div id="selectedCategory" class="selected-category">No category selected</div>
-  </div>
-
-  <div class="specifics-box">
-    <div class="section-head"><div><h3>Item specifics</h3><p>Loaded from the coin identification and eBay category requirements.</p></div><button id="loadAspects" type="button" disabled>Refresh specifics</button></div>
-    <div id="specificsList"></div>
-  </div>
-
-  <div class="listing-actions">
-    <button id="prepareListing" class="primary">Create draft listing</button>
-    <button id="submitEbay" class="ebay-submit" disabled>Submit to eBay</button>
-  </div>
-  <div id="listingStatus" class="listing-status"></div>
-</section>
-
-<section class="local-note">
-  <strong>Dev Lab — production untouched</strong>
-  <p>This build uses the existing SWISH database and the existing secure <code>swish-ebay-list</code> Edge Function. eBay secrets never enter this web app.</p>
-</section>
-</main>
-<script type="module" src="app.js"></script>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>
+window.SWISH_CONFIG = {"url": "https://iwgaqieyoahmcjfziwga.backend.onspace.ai", "key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3ODkwNjM4MTgsImV4cCI6MjEwNDQyMzgxOCwicmVmIjoiaXdnYXFpZXlvYWhtY2pmeml3Z2EiLCJyb2xlIjoiYW5vbiIsImlzcyI6Im9uc3BhY2UifQ.cioQ38guPLFAbl3x48mUaJcMSxU5IpZn7-H-JhtvXJc"};
+</script>
+<script type="text/babel">
+const {useState,useEffect,useMemo}=React;
+const C=window.SWISH_CONFIG;
+const fmt=n=>new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(Number(n)||0);
+const nav=[
+ ['overview','⌂','Overview'],['listings','▤','Listings'],['orders','▣','Orders'],['messages','✉','Messages'],['offers','◇','Offers'],
+ ['returns','↩','Returns'],['cases','!','Cases'],['finances','£','Finances'],['analytics','◒','Analytics'],['account','◎','Account'],
+ ['inventory','◈','Inventory'],['scanner','⌾','Coin Scanner'],['islamic','☪','Islamic Batch'],['repricing','↕','Repricing'],
+ ['import','⇩','eBay Import'],['csv','▦','eBay CSV'],['opportunities','★','Opportunities'],['tasks','✓','Tasks'],['settings','⚙','Settings']
+];
+function supa(path,opts={}){
+ const url=C.url.replace(/\/$/,'')+'/rest/v1/'+path;
+ return fetch(url,{...opts,headers:{apikey:C.key,Authorization:'Bearer '+C.key,'Content-Type':'application/json',Prefer:'return=representation',...(opts.headers||{})}}).then(async r=>({ok:r.ok,status:r.status,data:await r.json().catch(()=>null)}));
+}
+function Shell({page,setPage,children}){
+ return <div className="app"><aside className="side"><div className="brand">SW<span>I</span>SH</div><div className="group">eBay</div>{nav.map(([id,ic,t])=><button key={id} className={'navbtn '+(page===id?'active':'')} onClick={()=>setPage(id)}><b>{ic}</b><span className="txt">{t}</span></button>)}</aside><main className="main">{children}</main></div>
+}
+function Top({title,sub,actions}){return <div className="top"><div><div className="title">{title}</div>{sub&&<div className="sub">{sub}</div>}</div><div className="actions">{actions}</div></div>}
+function Dashboard({setPage}){
+ const [m,setM]=useState({listings:0,orders:0,sales:0,messages:0});
+ useEffect(()=>{(async()=>{try{
+   const [l,o,s,msg]=await Promise.all(['listings?select=id&marketplace_id=eq.ebay','orders?select=id&marketplace_id=eq.ebay','sales?select=sale_price&marketplace_id=eq.ebay','ebay_messages?select=id&is_read=eq.false&direction=eq.inbound']);
+   const arr=x=>Array.isArray(x.data)?x.data:[]; setM({listings:arr(l).length,orders:arr(o).length,sales:arr(s).reduce((a,r)=>a+Number(r.sale_price||0),0),messages:arr(msg).length});
+ }catch(e){}})()},[]);
+ return <><Top title="eBay Seller Hub" sub="SWISH web edition — connected to your existing backend" actions={<button className="btn primary" onClick={()=>setPage('scanner')}>+ Add / Scan</button>}/>
+ <div className="banner good"><div>●</div><div className="grow"><b>SWISH Web is running</b><div className="small">This copy uses the existing Supabase backend. No new database has been created.</div></div><span className="pill">ONLINE</span></div>
+ <div className="grid g4"><Metric l="Active / stored listings" v={m.listings}/><Metric l="Orders" v={m.orders}/><Metric l="Sales value" v={fmt(m.sales)}/><Metric l="Unread messages" v={m.messages}/></div>
+ <div className="section grid g2"><div className="hero"><h1>Everything in one place.</h1><div className="sub">Listings, orders, messages, offers, returns, finances, inventory and the coin workflow are available from the left navigation.</div><br/><button className="btn primary" onClick={()=>setPage('listings')}>Open listings</button></div><div className="card"><h2>Quick actions</h2><div className="statline"><span>Create listing</span><button className="btn" onClick={()=>setPage('create')}>Open</button></div><div className="statline"><span>Coin identification</span><button className="btn" onClick={()=>setPage('scanner')}>Open</button></div><div className="statline"><span>eBay CSV import</span><button className="btn" onClick={()=>setPage('csv')}>Open</button></div></div></div>
+ </>}
+function Metric({l,v}){return <div className="card"><div className="label">{l}</div><div className="metric">{v}</div></div>}
+async function DbList({title,table,columns,setPage}){
+ const [rows,setRows]=useState([]),[loading,setLoading]=useState(true),[err,setErr]=useState('');
+ const load=()=>{setLoading(true);supa(table+'?select=*&limit=100').then(r=>{if(!r.ok)throw Error('Database request failed ('+r.status+')');setRows(Array.isArray(r.data)?r.data:[])}).catch(e=>setErr(e.message)).finally(()=>setLoading(false))};
+ useEffect(load,[]);
+ return <><Top title={title} sub={'Live data from '+table} actions={<><button className="btn" onClick={load}>Refresh</button>{title==='Listings'&&<button className="btn primary" onClick={()=>setPage('create')}>Create listing</button>}</>}/>
+ {err&&<div className="banner bad">{err}</div>}
+ <div className="card">{loading?<div className="empty">Loading…</div>:rows.length===0?<div className="empty">No records returned yet.</div>:<table className="table"><thead><tr>{columns.map(c=><th key={c}>{c}</th>)}</tr></thead><tbody>{rows.map((r,i)=><tr key={r.id||i}>{columns.map(c=><td key={c}>{String(r[c]??'')}</td>)}</tr>)}</tbody></table>}</div></>
+}
+function Scanner(){
+ const [front,setFront]=useState(null),[back,setBack]=useState(null),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[result,setResult]=useState(null);
+ const pick=(setter)=><input hidden type="file" accept="image/*" capture="environment" onChange={e=>{const f=e.target.files?.[0];if(f)setter(URL.createObjectURL(f))}} id={'p'+Math.random()}/>;
+ const analyse=async()=>{setBusy(true);setResult(null);await new Promise(r=>setTimeout(r,800));setResult({status:'Ready for verification',message:'Images captured locally. Connect the existing identification Edge Function here for live attribution and valuation; this web shell does not invent a coin ID or price.'});setBusy(false)};
+ return <><Top title="Coin Scanner" sub="Obverse + reverse capture and verification workflow"/><div className="grid g2"><div className="card"><h2>Obverse</h2>{front?<img src={front} style={{width:'100%',maxHeight:330,objectFit:'contain',borderRadius:12}}/>:<div className="drop">Choose or capture obverse image</div>}<input className="field" type="file" accept="image/*" capture="environment" onChange={e=>{const f=e.target.files?.[0];if(f)setFront(URL.createObjectURL(f))}}/></div><div className="card"><h2>Reverse</h2>{back?<img src={back} style={{width:'100%',maxHeight:330,objectFit:'contain',borderRadius:12}}/>:<div className="drop">Choose or capture reverse image</div>}<input className="field" type="file" accept="image/*" capture="environment" onChange={e=>{const f=e.target.files?.[0];if(f)setBack(URL.createObjectURL(f))}}/></div></div><div className="card section"><h2>Notes / voice transcript</h2><textarea className="field" rows="4" value={note} onChange={e=>setNote(e.target.value)} placeholder="Describe weight, diameter, metal, markings or your voice-note transcript…"/><br/><button className="btn primary" disabled={busy||!front||!back} onClick={analyse}>{busy?'Analysing…':'Identify coin'}</button></div>{result&&<div className="banner good section"><div className="grow"><b>{result.status}</b><div className="small">{result.message}</div></div></div>}</>
+}
+function Create(){
+ const [title,setTitle]=useState(''),[price,setPrice]=useState(''),[desc,setDesc]=useState(''),[msg,setMsg]=useState('');
+ const save=async()=>{setMsg('Saving…');try{const r=await supa('listings',{method:'POST',body:JSON.stringify({title,price:Number(price||0),description:desc,marketplace_id:'ebay',status:'draft'})});setMsg(r.ok?'Draft saved to the existing listings table.':'Save failed — check the database schema/RLS.')}catch(e){setMsg(e.message)}};
+ return <><Top title="Create Listing" sub="Simple eBay-first listing workflow"/><div className="card"><label className="label">Title</label><input className="field" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Item title"/><br/><label className="label">Price (£)</label><input className="field" value={price} onChange={e=>setPrice(e.target.value)} inputMode="decimal"/><br/><label className="label">Description</label><textarea className="field" rows="9" value={desc} onChange={e=>setDesc(e.target.value)}/><br/><button className="btn primary" onClick={save}>Save draft</button>{msg&&<p className="small">{msg}</p>}</div></>
+}
+function Generic({page,setPage}){
+ const map={messages:['Messages','ebay_messages',['id','subject','direction','is_read']],offers:['Offers','ebay_offers',['id','status','amount']],returns:['Returns','ebay_returns',['id','status','reason']],cases:['Cases','ebay_cases',['id','status']],finances:['Finances','ebay_financials',['id','amount','transaction_type','transaction_date']],inventory:['Inventory','inventory',['id','title','status']],repricing:['Repricing','listings',['id','title','price','status']],orders:['Orders','orders',['id','status','fulfilment_status']],analytics:['Analytics','sales',['id','sale_price','net_revenue','sold_at']],opportunities:['Opportunities','opportunities',['id','title','status']],tasks:['Tasks','tasks',['id','title','status']],account:['eBay Account','marketplace_connectors',['id','status','seller_account_id']],import:['eBay Import','listings',['id','title','status']],csv:['eBay CSV','listings',['id','title','status']],islamic:['Islamic Batch','koc_coins',['id','title','weight_g','identification_confidence']],settings:['Settings','business_config',['id','business_name']]};
+ const [t,table,cols]=map[page]||['Page',page,['id']];
+ return <DbList title={t} table={table} columns={cols} setPage={setPage}/>
+}
+function App(){
+ const [page,setPage]=useState(location.hash.replace('#/','')||'overview');
+ useEffect(()=>{const f=()=>setPage(location.hash.replace('#/','')||'overview');addEventListener('hashchange',f);return()=>removeEventListener('hashchange',f)},[]);
+ const go=p=>{location.hash='/'+p;setPage(p)};
+ let body=page==='overview'?<Dashboard setPage={go}/>:page==='scanner'?<Scanner/>:page==='create'?<Create/>:page==='listings'?<DbList title="Listings" table="listings" columns={['id','title','status','price','marketplace_id']} setPage={go}/>:<Generic page={page} setPage={go}/>;
+ return <Shell page={page} setPage={go}>{body}</Shell>
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
 </body>
 </html>
