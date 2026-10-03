@@ -225,6 +225,7 @@ const CFG={
 const FN={
  browse:'swish-ebay-browse',
  list:'swish-ebay-list',
+ taxonomy:'swish-ebay-taxonomy',
  messages:'swish-ebay-messages',
  orders:'swish-ebay-orders',
  postOrder:'swish-ebay-post-order',
@@ -807,7 +808,7 @@ function categoryHtml(){
    <label>Search live eBay UK categories</label>
    <div class="searchbar">
      <input id="catSearch" placeholder="e.g. ancient silver coin, medal, binoculars, books…" onkeydown="if(event.key==='Enter')SWISH.searchCategories()">
-     <button class="btn primary" onclick="SWISH.searchCategories()">Search eBay</button>
+     <button class="btn primary" onclick="SWISH.searchCategories()">Search LIVE eBay</button><button class="btn ghost" onclick="SWISH.browseRootCategories()">Browse</button>
    </div>
  </div>
  <div id="catNote" class="smalltext muted" style="margin:8px 0 12px">
@@ -815,7 +816,7 @@ function categoryHtml(){
  </div>
  <div class="category-browser">
    <div>
-     <div class="smalltext muted" style="margin-bottom:6px">Live eBay results</div>
+     <div class="smalltext muted" style="margin-bottom:6px">LIVE eBay UK results</div>
      <div id="catList" class="category-list"><div class="empty">Enter a product description or search term.</div></div>
    </div>
    <div>
@@ -835,6 +836,54 @@ function openCategories(){
  if(title){
    $('#catSearch').value=title;
    searchCategories();
+ }else{
+   browseRootCategories();
+ }
+}
+
+async function browseRootCategories(){
+ const box=$('#catList'),note=$('#catNote');
+ box.innerHTML='<div class="empty">Connecting to the LIVE eBay UK category tree…</div>';
+ note.innerHTML='<span class="pill">LIVE</span> Getting the current eBay UK category tree…';
+ try{
+   if(!state.tenant)throw new Error('Sign in to SWISH first.');
+   const health=await fn(FN.taxonomy,{route:'health',tenantId:state.tenant.id});
+   const data=await fn(FN.taxonomy,{route:'get_category_children',tenantId:state.tenant.id,parentId:'0'});
+   const rows=Array.isArray(data?.children)?data.children:[];
+   if(!rows.length)throw new Error('eBay returned no top-level categories.');
+   state.category.items=rows;
+   box.innerHTML=rows.map(c=>`<div class="catrow ${c.isLeaf?'leaf':''}" onclick="SWISH.openCategoryNode('${esc(c.id)}','${esc(c.name)}',${c.isLeaf?'true':'false'})"><span><b>${esc(c.name)}</b><small style="display:block;color:var(--muted);margin-top:3px">ID ${esc(c.id)}</small></span><span class="arrow">${c.isLeaf?'✓ Leaf':'›'}</span></div>`).join('');
+   note.innerHTML=`<span class="pill good">LIVE</span> eBay UK tree ${esc(health?.categoryTreeId||data?.categoryTreeId||'')} · version ${esc(health?.categoryTreeVersion||data?.categoryTreeVersion||'')}`;
+   log('eBay taxonomy connected: UK tree '+(health?.categoryTreeId||data?.categoryTreeId||'?')+' version '+(health?.categoryTreeVersion||data?.categoryTreeVersion||'?'));
+ }catch(e){
+   const msg=e?.message||'Live category connection failed.';
+   box.innerHTML=`<div class="empty" style="border-color:#71313d"><b style="color:var(--bad)">LIVE eBay category connection failed</b><p class="smalltext muted">${esc(msg)}</p><button class="btn small" onclick="SWISH.browseRootCategories()">Retry</button></div>`;
+   note.innerHTML='<span class="pill bad">LIVE LOOKUP FAILED</span> eBay returned an error — no fallback catalogue is being used.';
+   log('eBay taxonomy ERROR: '+msg);
+ }
+}
+
+async function openCategoryNode(id,name,isLeaf){
+ if(isLeaf){
+   try{
+     const data=await fn(FN.taxonomy,{route:'verify_leaf',tenantId:state.tenant.id,categoryId:id});
+     if(!data?.isLeaf)throw new Error('eBay did not verify this category as a leaf.');
+     chooseLiveCategory(id,name,name);
+   }catch(e){toast(e?.message||'Category verification failed','bad');}
+   return;
+ }
+ const box=$('#catList'),note=$('#catNote');
+ box.innerHTML='<div class="empty">Loading live child categories from eBay…</div>';
+ try{
+   const data=await fn(FN.taxonomy,{route:'get_category_children',tenantId:state.tenant.id,parentId:id});
+   const rows=Array.isArray(data?.children)?data.children:[];
+   if(!rows.length)throw new Error('eBay returned no child categories for '+name+'.');
+   box.innerHTML='<div class="smalltext muted" style="padding:10px"><button class="btn small ghost" onclick="SWISH.browseRootCategories()">Top level</button> '+esc(name)+'</div>'+rows.map(c=>`<div class="catrow ${c.isLeaf?'leaf':''}" onclick="SWISH.openCategoryNode('${esc(c.id)}','${esc(c.name)}',${c.isLeaf?'true':'false'})"><span><b>${esc(c.name)}</b><small style="display:block;color:var(--muted);margin-top:3px">ID ${esc(c.id)}</small></span><span class="arrow">${c.isLeaf?'✓ Leaf':'›'}</span></div>`).join('');
+   note.innerHTML=`<span class="pill good">LIVE</span> ${rows.length} children returned by eBay`;
+ }catch(e){
+   const msg=e?.message||'Live child category lookup failed.';
+   box.innerHTML=`<div class="empty" style="border-color:#71313d"><b style="color:var(--bad)">LIVE eBay child lookup failed</b><p class="smalltext muted">${esc(msg)}</p><button class="btn small" onclick="SWISH.openCategoryNode('${esc(id)}','${esc(name)}',false)">Retry</button></div>`;
+   note.innerHTML='<span class="pill bad">LIVE LOOKUP FAILED</span>';
  }
 }
 
@@ -916,7 +965,7 @@ async function searchCategories(){
      Important: resolve_category is the production route documented by the
      existing swish-ebay-list Edge Function. It keeps eBay credentials server-side.
    */
-   const data=await fn(FN.list,{
+   const data=await fn(FN.taxonomy,{
      route:'resolve_category',
      tenantId:state.tenant.id,
      title:q,
@@ -978,7 +1027,7 @@ async function loadAspectsIfNeeded(){
  if(!d?.categoryId||!box)return;
  box.innerHTML='<div class="empty">Loading live eBay item specifics for this leaf category…</div>';
  try{
-   const data=await fn(FN.list,{
+   const data=await fn(FN.taxonomy,{
      route:'get_category_aspects',
      tenantId:state.tenant.id,
      categoryId:d.categoryId
@@ -1002,11 +1051,7 @@ function loadCategoryCrumb(i){const c=state.category.crumbs[i];state.category.cr
 function chooseCategory(id,name){
  state.editor.categoryId=id;state.editor.categoryName=name;closeModal();openEditor();loadAspectsIfNeeded();toast('Category selected','good');
 }
-async function loadAspectsIfNeeded(){
- const d=state.editor;
- if(!d?.categoryId)return;
- loadLocalAspects(d.categoryId,d.categoryName);
-}
+// Deliberately no local category/aspects fallback. The live eBay Taxonomy loader above is authoritative.
 function drawAspects(){
  const box=$('#aspectsBox'),as=state.aspects||[];
  if(!as.length){box.innerHTML='<div class="empty">No category aspects were returned. The selected category may not expose metadata through the current edge function.</div>';return}
@@ -1093,7 +1138,7 @@ window.SWISH={
  sync,syncImages,syncOrders,syncOffers,syncMessages,syncPostOrder,
  openMessage,replyMessage,sendReply,runCommand,research,
  previewImage,identifyCoin,islamicScan,calculate,previewCsv,
- openCategories,loadCategories,searchCategories,chooseLiveCategory,loadAspectsIfNeeded,setAspect,
+ openCategories,loadCategories,searchCategories,browseRootCategories,openCategoryNode,chooseLiveCategory,loadAspectsIfNeeded,setAspect,
  addEditorImages,removeEditorImage,clearLog,refreshSettings,
  editor:state.editor
 };
@@ -1106,6 +1151,153 @@ document.addEventListener('click',e=>{
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
 
 bootstrap();
+
+/* ================================================================
+   SWISH TEMPORARY OFFLINE EBAY UK CATEGORY CACHE
+   Single-user web-app mode: no Supabase / Edge Function required.
+   This cache is sourced from eBay UK's published category-change tree.
+   It is intentionally marked TEMPORARY and is NOT the final live source.
+   Final version will switch back to eBay Taxonomy API when backend access
+   is available. Category IDs below are eBay UK IDs; do not invent IDs.
+================================================================ */
+const SWISH_TEMP_EBAY_GB_CATEGORIES = [
+  // Coins & Paper Money / Ancient & British coins
+  {id:'58520',name:'Coins',path:'Coins',leaf:false},
+  {id:'4733',name:'Ancient',path:'Coins › Ancient',leaf:false},
+  {id:'4738',name:'Greek',path:'Coins › Ancient › Greek',leaf:true},
+  {id:'58519',name:'Roman',path:'Coins › Ancient › Roman',leaf:false},
+  {id:'4734',name:'Roman Republican (c.300-27 BC)',path:'Coins › Ancient › Roman › Roman Republican (c.300-27 BC)',leaf:true},
+  {id:'122471',name:'Roman Imperial (27BC-96AD)',path:'Coins › Ancient › Roman › Roman Imperial (27BC-96AD)',leaf:true},
+  {id:'3365',name:'Roman Imperial (96-235AD)',path:'Coins › Ancient › Roman › Roman Imperial (96-235AD)',leaf:true},
+  {id:'122472',name:'Roman Imperial (235-476AD)',path:'Coins › Ancient › Roman › Roman Imperial (235-476AD)',leaf:true},
+  {id:'4735',name:'Roman Provincial',path:'Coins › Ancient › Roman › Roman Provincial',leaf:true},
+  {id:'131482',name:'Bulk Lots (Cleaned)',path:'Coins › Ancient › Roman › Bulk Lots (Cleaned)',leaf:true},
+  {id:'131483',name:'Bulk Lots (Uncleaned)',path:'Coins › Ancient › Roman › Bulk Lots (Uncleaned)',leaf:true},
+  {id:'3364',name:'Byzantine',path:'Coins › Ancient › Byzantine',leaf:true},
+  {id:'4740',name:'Chinese',path:'Coins › Ancient › Chinese',leaf:true},
+  {id:'4739',name:'Islamic',path:'Coins › Ancient › Islamic',leaf:true},
+  {id:'4737',name:'Persian, Indian',path:'Coins › Ancient › Persian, Indian',leaf:true},
+  {id:'93500',name:'Collections/Bulk Lots',path:'Coins › Ancient › Collections/Bulk Lots',leaf:true},
+  {id:'532',name:'Other Ancient Coins',path:'Coins › Ancient › Other Ancient Coins',leaf:true},
+  {id:'3394',name:'British',path:'Coins › British',leaf:false},
+  {id:'58521',name:'Hammered (Pre-c.1662)',path:'Coins › British › Hammered (Pre-c.1662)',leaf:false},
+  {id:'122475',name:'Celtic Coins (c.100BC-c.100AD)',path:'Coins › British › Hammered (Pre-c.1662) › Celtic Coins (c.100BC-c.100AD)',leaf:true},
+  {id:'58523',name:'Anglo-Saxon Coins (c.600-1066)',path:'Coins › British › Hammered (Pre-c.1662) › Anglo-Saxon Coins (c.600-1066)',leaf:true},
+  {id:'122476',name:'Norman Coins (1066-1154)',path:'Coins › British › Hammered (Pre-c.1662) › Norman Coins (1066-1154)',leaf:true},
+  {id:'47389',name:'Later Medieval (1154-1485)',path:'Coins › British › Hammered (Pre-c.1662) › Later Medieval (1154-1485)',leaf:true},
+  {id:'58524',name:'Tudor Coins (1485-1603)',path:'Coins › British › Hammered (Pre-c.1662) › Tudor Coins (1485-1603)',leaf:true},
+  {id:'122477',name:'Stuart & Commonwealth Coins',path:'Coins › British › Hammered (Pre-c.1662) › Stuart & Commonwealth Coins',leaf:true},
+  {id:'122478',name:'Replica Hammered Coins',path:'Coins › British › Hammered (Pre-c.1662) › Replica Hammered Coins',leaf:true},
+  {id:'58522',name:'Other British Hammered Coins',path:'Coins › British › Hammered (Pre-c.1662) › Other British Hammered Coins',leaf:true},
+  {id:'72366',name:'Early Milled (c.1662-1816)',path:'Coins › British › Early Milled (c.1662-1816)',leaf:false},
+  {id:'72367',name:'Farthing',path:'Coins › British › Early Milled (c.1662-1816) › Farthing',leaf:true},
+  {id:'72368',name:'Half-Penny',path:'Coins › British › Early Milled (c.1662-1816) › Half-Penny',leaf:true},
+  {id:'72369',name:'Penny',path:'Coins › British › Early Milled (c.1662-1816) › Penny',leaf:true},
+  {id:'58528',name:'Twopence',path:'Coins › British › Early Milled (c.1662-1816) › Twopence',leaf:true},
+  {id:'72370',name:'Threepence',path:'Coins › British › Early Milled (c.1662-1816) › Threepence',leaf:true},
+  {id:'72371',name:'Fourpence/Groat',path:'Coins › British › Early Milled (c.1662-1816) › Fourpence/Groat',leaf:true},
+  {id:'72372',name:'Maundy Sets/Coins',path:'Coins › British › Early Milled (c.1662-1816) › Maundy Sets/Coins',leaf:true},
+  {id:'72373',name:'Sixpence',path:'Coins › British › Early Milled (c.1662-1816) › Sixpence',leaf:true},
+  {id:'72374',name:'Shilling',path:'Coins › British › Early Milled (c.1662-1816) › Shilling',leaf:true},
+  {id:'72375',name:'Half-Crown',path:'Coins › British › Early Milled (c.1662-1816) › Half-Crown',leaf:true},
+  {id:'72376',name:'Crown',path:'Coins › British › Early Milled (c.1662-1816) › Crown',leaf:true},
+  {id:'58527',name:'Guinea',path:'Coins › British › Early Milled (c.1662-1816) › Guinea',leaf:true},
+  {id:'101118',name:'Bank of England Issues',path:'Coins › British › Early Milled (c.1662-1816) › Bank of England Issues',leaf:true},
+  {id:'72377',name:'Other Early Milled Coins',path:'Coins › British › Early Milled (c.1662-1816) › Other Early Milled Coins',leaf:true},
+  // Other numismatic categories
+  {id:'58534',name:'Tokens',path:'Tokens',leaf:false},
+  {id:'72383',name:'British',path:'Tokens › British',leaf:false},
+  {id:'72384',name:'17th Century',path:'Tokens › British › 17th Century',leaf:true},
+  {id:'3455',name:'18th Century',path:'Tokens › British › 18th Century',leaf:true},
+  {id:'72385',name:'19th Century',path:'Tokens › British › 19th Century',leaf:true},
+  {id:'72386',name:'20th Century',path:'Tokens › British › 20th Century',leaf:true},
+  {id:'58535',name:'European',path:'Tokens › European',leaf:true},
+  {id:'259',name:'World',path:'Tokens › World',leaf:true},
+  {id:'93503',name:'Collections/Bulk Lots',path:'Tokens › Collections/Bulk Lots',leaf:true},
+  {id:'72378',name:'Historical Medals/Medallions',path:'Historical Medals/Medallions',leaf:false},
+  {id:'141163',name:'British',path:'Historical Medals/Medallions › British',leaf:false},
+  {id:'141164',name:'18th Century',path:'Historical Medals/Medallions › British › 18th Century',leaf:true},
+  {id:'3454',name:'19th Century',path:'Historical Medals/Medallions › British › 19th Century',leaf:true},
+  {id:'141165',name:'20th Century',path:'Historical Medals/Medallions › British › 20th Century',leaf:true},
+  {id:'72379',name:'European',path:'Historical Medals/Medallions › European',leaf:true},
+  {id:'72380',name:'World',path:'Historical Medals/Medallions › World',leaf:true},
+  {id:'93501',name:'Collections/Bulk Lots',path:'Historical Medals/Medallions › Collections/Bulk Lots',leaf:true},
+  // Antiques / collectables commonly used in SWISH
+  {id:'20081',name:'Antiques',path:'Antiques',leaf:false},
+  {id:'1207',name:'Other Antiques',path:'Antiques › Other Antiques',leaf:true},
+  {id:'550',name:'Art',path:'Art',leaf:false},
+  {id:'551',name:'Paintings',path:'Art › Paintings',leaf:true},
+  {id:'552',name:'Art Drawings',path:'Art › Art Drawings',leaf:true},
+  {id:'553',name:'Art Sculptures',path:'Art › Art Sculptures',leaf:true},
+  {id:'554',name:'Mixed Media Art & Collage Art',path:'Art › Mixed Media Art & Collage Art',leaf:true},
+  {id:'360',name:'Art Prints',path:'Art › Art Prints',leaf:true},
+  {id:'2211',name:'Art Photographs',path:'Art › Art Photographs',leaf:true},
+  {id:'267',name:'Books, Comics & Magazines',path:'Books, Comics & Magazines',leaf:false},
+  {id:'29223',name:'Antiquarian & Collectable',path:'Books, Comics & Magazines › Antiquarian & Collectable',leaf:true},
+  {id:'261186',name:'Books',path:'Books, Comics & Magazines › Books',leaf:true},
+  {id:'63',name:'Comic Books & Memorabilia',path:'Books, Comics & Magazines › Comic Books & Memorabilia',leaf:false},
+  {id:'259104',name:'Comics & Graphic Novels',path:'Books, Comics & Magazines › Comic Books & Memorabilia › Comics › Comics & Graphic Novels',leaf:true},
+  // Optics / binoculars
+  {id:'28179',name:'Telescopes & Binoculars',path:'Cameras & Photography › Telescopes & Binoculars',leaf:false},
+  {id:'83880',name:'Binoculars & Monoculars',path:'Cameras & Photography › Telescopes & Binoculars › Binoculars & Monoculars',leaf:true},
+  {id:'162485',name:'Binocular Accessories',path:'Cameras & Photography › Telescopes & Binoculars › Binocular Accessories',leaf:true},
+  {id:'74927',name:'Telescopes',path:'Cameras & Photography › Telescopes & Binoculars › Telescopes',leaf:true},
+  {id:'162044',name:'Other Telescopes & Binoculars',path:'Cameras & Photography › Telescopes & Binoculars › Other Telescopes & Binoculars',leaf:true},
+  // Toys & games
+  {id:'220',name:'Toys & Games',path:'Toys & Games',leaf:false},
+  {id:'234',name:'Other Games',path:'Toys & Games › Games › Other Games',leaf:true},
+  {id:'2613',name:'Jigsaws & Puzzles',path:'Toys & Games › Jigsaws & Puzzles',leaf:false},
+  {id:'19183',name:'Jigsaws',path:'Toys & Games › Jigsaws & Puzzles › Jigsaws',leaf:true},
+  {id:'19188',name:'Vintage Puzzles',path:'Toys & Games › Jigsaws & Puzzles › Vintage Puzzles',leaf:true},
+  {id:'1039',name:'Other Toys & Games',path:'Toys & Games › Other Toys & Games',leaf:true}
+];
+
+function swishTempCategoryResults(q){
+ const words=(q||'').toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>1);
+ if(!words.length)return SWISH_TEMP_EBAY_GB_CATEGORIES.filter(x=>x.leaf);
+ const scored=SWISH_TEMP_EBAY_GB_CATEGORIES.filter(x=>x.leaf).map(x=>{
+   const hay=(x.name+' '+x.path).toLowerCase();
+   let score=0;
+   for(const w of words){ if(hay.includes(w))score+=hay===w?10:3; }
+   if(/coin|ancient|roman|greek|islamic|silver|dirham|drachm|token|medal/.test(q.toLowerCase()) && /coin|token|medal|greek|roman|islamic|persian|indian|byzantine|british/.test(hay))score+=2;
+   return {...x,score};
+ }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));
+ return scored.length?scored.slice(0,30):SWISH_TEMP_EBAY_GB_CATEGORIES.filter(x=>x.leaf).slice(0,30);
+}
+
+function categoryHtml(){
+ return `<div class="field">
+   <label>eBay UK category (temporary offline cache)</label>
+   <div class="searchbar">
+     <input id="catSearch" placeholder="e.g. ancient silver coin, medal, binoculars, books…" onkeydown="if(event.key==='Enter')SWISH.searchCategories()">
+     <button class="btn primary" onclick="SWISH.searchCategories()">Search Categories</button>
+   </div>
+ </div>
+ <div id="catNote" class="smalltext" style="margin:8px 0 12px"><span class="pill">TEMPORARY</span> Single-user offline eBay UK category cache. No backend required.</div>
+ <div class="category-browser"><div><div class="smalltext muted" style="margin-bottom:6px">eBay UK cached leaf categories</div><div id="catList" class="category-list"><div class="empty">Search for a category.</div></div></div>
+ <div><div class="smalltext muted" style="margin-bottom:6px">Selection</div><div id="catSelection" class="card"><b id="catSelectedName">${esc(state.editor?.categoryName||'No category selected')}</b><p class="muted smalltext" id="catSelectedId">Category ID: ${esc(state.editor?.categoryId||'—')}</p><p class="muted smalltext">Temporary cache only. Final live Taxonomy validation will be restored when backend access is available.</p></div></div></div>`;
+}
+function openCategories(){
+ openModal('eBay UK category browser',categoryHtml());
+ const title=state.editor?.title?.trim()||'';
+ if(title){$('#catSearch').value=title;searchCategories();}
+}
+async function browseRootCategories(){searchCategories();}
+async function searchCategories(){
+ const q=($('#catSearch')?.value||'').trim();
+ const box=$('#catList'),note=$('#catNote');
+ const rows=swishTempCategoryResults(q);
+ box.innerHTML=rows.map(c=>`<div class="catrow leaf" onclick="SWISH.chooseLiveCategory('${esc(c.id)}','${esc(c.name)}','${esc(c.path)}')"><span><b>${esc(c.name)}</b><small style="display:block;color:var(--muted);margin-top:3px">${esc(c.path)} · eBay UK ID ${esc(c.id)}</small></span><span class="arrow">✓ Leaf</span></div>`).join('');
+ note.innerHTML=`<span class="pill">TEMPORARY</span> ${rows.length} cached eBay UK leaf categories. These IDs are from eBay's published UK category structure; live verification is deliberately disabled in offline mode.`;
+}
+async function loadAspectsIfNeeded(){
+ const box=document.getElementById('aspects')||document.getElementById('itemAspects');
+ if(box)box.innerHTML='<div class="smalltext muted"><span class="pill">TEMPORARY</span> Live eBay item specifics require the backend Taxonomy API. Category ID is saved and will be live-validated when backend access is restored.</div>';
+}
+
+// Expose the offline replacements.
+try{Object.assign(SWISH,{openCategories,browseRootCategories,searchCategories,loadAspectsIfNeeded});}catch(e){}
+
 </script>
 </body>
 </html>
