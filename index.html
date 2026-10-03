@@ -764,27 +764,148 @@ async function openCategories(){
  await loadCategories('');
 }
 function categoryHtml(){return `<div class="field"><label>Search eBay categories</label><div class="searchbar"><input id="catSearch" placeholder="coins, silver, medals, books…" onkeydown="if(event.key==='Enter')SWISH.searchCategories()"><button class="btn" onclick="SWISH.searchCategories()">Search</button></div></div><div class="category-browser"><div><div class="smalltext muted" style="margin-bottom:6px">Category tree</div><div id="catCrumbs" class="statline" style="margin-bottom:7px"></div><div id="catList" class="category-list"><div class="empty">Loading…</div></div></div><div><div class="smalltext muted" style="margin-bottom:6px">Selection</div><div id="catSelection" class="card"><p class="muted smalltext">Choose a leaf category. SWISH stores the category ID and uses it when publishing/revising.</p></div></div></div>`}
-async function loadCategories(parentId=''){
- state.category.parent=parentId;state.category.loading=true;$('#catList').innerHTML='<div class="empty">Loading categories…</div>';
- try{
-  const d=await fn(FN.list,{route:'get_category_children',tenantId:state.tenant.id,parentId});
-  state.category.items=d.children||d.categories||[];drawCategories(d);
- }catch(e){
-  $('#catList').innerHTML='<div class="empty">'+esc(e.message)+'</div>';log('Category browser: '+e.message)
- }finally{state.category.loading=false}
+const CATEGORY_FALLBACK=[
+ {id:'4726',name:'British Coins'},
+ {id:'40714',name:'Ancient Coins'},
+ {id:'18594',name:'Medieval Coins'},
+ {id:'18593',name:'Hammered Coins'},
+ {id:'4157',name:'Roman Coins'},
+ {id:'4158',name:'Greek Coins'},
+ {id:'4199',name:'Islamic & Oriental Coins'},
+ {id:'4200',name:'Indian Coins'},
+ {id:'527',name:'Coin Collections & Lots'},
+ {id:'13956',name:'Militaria'},
+ {id:'261',name:'GB Stamps'},
+ {id:'183454',name:'Trading Cards / CCG'},
+ {id:'2536',name:'Postcards'},
+ {id:'2534',name:'Cigarette Cards'},
+ {id:'20091',name:'Antique Furniture'},
+ {id:'870',name:'Ceramics & Pottery'},
+ {id:'11675',name:'Maps & Atlases'},
+ {id:'261186',name:'Rare & Antiquarian Books'},
+ {id:'50',name:'Fine Jewellery'},
+ {id:'14324',name:'Wristwatches'},
+ {id:'14325',name:'Pocket Watches'},
+ {id:'1469',name:'Other Collectables'}
+];
+
+function showCategoryFallback(message){
+ const box=$('#catList'); if(!box)return;
+ box.innerHTML=
+   `<div style="padding:9px 10px;color:var(--warn);font-size:10px;border-bottom:1px solid var(--line)">
+      ${esc(message||'Live eBay taxonomy is unavailable. These are curated starting points; verify the final leaf category before publishing.')}
+    </div>`+
+   CATEGORY_FALLBACK.map(c=>`<div class="catrow leaf" onclick="SWISH.chooseCategory('${esc(c.id)}','${esc(c.name)}')">
+      <span>${esc(c.name)}</span><span class="arrow">✓</span>
+   </div>`).join('');
+ $('#catCrumbs').innerHTML='';
 }
+
+async function loadCategories(parentId=''){
+ state.category.parent=parentId;
+ state.category.loading=true;
+ const box=$('#catList');
+ if(box)box.innerHTML='<div class="empty">Loading live eBay categories…<br><small>If eBay does not respond, SWISH will show safe starting categories.</small></div>';
+
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),12000);
+
+ try{
+   if(!state.tenant)throw new Error('Sign in to SWISH before loading live eBay categories.');
+
+   const r=await fetch(CFG.url+'/functions/v1/'+FN.list,{
+     method:'POST',
+     headers:headers(),
+     body:JSON.stringify({route:'get_category_children',tenantId:state.tenant.id,parentId}),
+     signal:controller.signal
+   });
+
+   const text=await r.text();
+   let d;
+   try{d=text?JSON.parse(text):null}catch{d={raw:text}}
+
+   if(!r.ok)throw new Error(d?.error||d?.message||('HTTP '+r.status));
+   if(!d?.success)throw new Error(d?.error||'The eBay category service did not return a category tree.');
+
+   const children=d.children||d.categories||[];
+   if(!children.length)throw new Error('No category children were returned.');
+
+   state.category.items=children;
+   drawCategories(d);
+
+   const source=d.source||'live';
+   if(source==='curated'||source==='curated_verified'){
+     $('#catList').insertAdjacentHTML('afterbegin',
+       `<div style="padding:8px 10px;color:var(--warn);font-size:10px;border-bottom:1px solid var(--line)">
+        Curated verified eBay categories supplied by SWISH. Live taxonomy search is still preferred.
+       </div>`);
+   }
+ }catch(e){
+   const msg=e.name==='AbortError'
+     ?'The live eBay category service timed out after 12 seconds.'
+     :(e.message||'The live eBay category service is unavailable.');
+   log('Category browser: '+msg);
+   showCategoryFallback(msg);
+ }finally{
+   clearTimeout(timer);
+   state.category.loading=false;
+ }
+}
+
 function drawCategories(d){
- const list=state.category.items||[];$('#catList').innerHTML=list.length?list.map(c=>`<div class="catrow ${c.isLeaf?'leaf':''}" onclick="${c.isLeaf?`SWISH.chooseCategory('${esc(c.id)}','${esc(c.name)}')`:`SWISH.loadCategories('${esc(c.id)}')`}"><span>${esc(c.name)}</span><span class="arrow">${c.isLeaf?'✓ Leaf':'›'}</span></div>`).join(''):'<div class="empty">No categories returned.</div>';
+ const list=state.category.items||[];
+ const box=$('#catList'); if(!box)return;
+ box.innerHTML=list.length
+   ?list.map(c=>`<div class="catrow ${c.isLeaf?'leaf':''}" onclick="${c.isLeaf?`SWISH.chooseCategory('${esc(c.id)}','${esc(c.name)}')`:`SWISH.loadCategories('${esc(c.id)}')`}"><span>${esc(c.name)}</span><span class="arrow">${c.isLeaf?'✓ Leaf':'›'}</span></div>`).join('')
+   :'<div class="empty">No categories returned.</div>';
  $('#catCrumbs').innerHTML=state.category.crumbs.map((c,i)=>`<button class="btn small" onclick="SWISH.loadCategoryCrumb(${i})">${esc(c.name)}</button>`).join('');
 }
+
 async function searchCategories(){
- const q=$('#catSearch').value.trim();if(!q)return;
+ const q=($('#catSearch')?.value||'').trim().toLowerCase();
+ if(!q)return;
+ const box=$('#catList');
+ if(box)box.innerHTML='<div class="empty">Searching eBay categories…</div>';
+
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),12000);
+
  try{
-  const d=await fn(FN.list,{route:'get_category_suggestions',tenantId:state.tenant.id,searchQuery:q});
-  state.category.items=d.suggestions||d.categories||d.categorySuggestions||[];
-  $('#catList').innerHTML=state.category.items.length?state.category.items.map(c=>{const x=c.category||c;const leaf=x.isLeaf??c.leafCategoryTreeNode??true;return `<div class="catrow leaf" onclick="SWISH.chooseCategory('${esc(x.id||x.categoryId)}','${esc(x.name||x.categoryName)}')"><span>${esc(x.name||x.categoryName)}</span><span class="arrow">✓</span></div>`}).join(''):'<div class="empty">No category suggestions returned.</div>';
- }catch(e){$('#catList').innerHTML='<div class="empty">'+esc(e.message)+'</div>'}
+   const r=await fetch(CFG.url+'/functions/v1/'+FN.list,{
+     method:'POST',
+     headers:headers(),
+     body:JSON.stringify({route:'get_category_suggestions',tenantId:state.tenant.id,searchQuery:q}),
+     signal:controller.signal
+   });
+   const text=await r.text();
+   let d;
+   try{d=text?JSON.parse(text):null}catch{d={raw:text}}
+   if(!r.ok)throw new Error(d?.error||d?.message||('HTTP '+r.status));
+   if(!d?.success)throw new Error(d?.error||'No category suggestions returned.');
+
+   const suggestions=d.suggestions||d.categories||d.categorySuggestions||[];
+   const rows=suggestions.map(s=>{
+     const x=s.category||s;
+     return {id:x.categoryId||x.id,name:x.categoryName||x.name,isLeaf:x.leafCategoryTreeNode===true||x.isLeaf===true};
+   }).filter(x=>x.id&&x.name);
+
+   if(!rows.length)throw new Error('No matching eBay categories found.');
+
+   state.category.items=rows;
+   box.innerHTML=rows.map(c=>`<div class="catrow ${c.isLeaf?'leaf':''}" onclick="${c.isLeaf?`SWISH.chooseCategory('${esc(c.id)}','${esc(c.name)}')`:''}"><span>${esc(c.name)}</span><span class="arrow">${c.isLeaf?'✓ Leaf':'Not a leaf'}</span></div>`).join('');
+ }catch(e){
+   const msg=e.name==='AbortError'?'The live category search timed out after 12 seconds.':(e.message||'Category search unavailable.');
+   log('Category search: '+msg);
+   const matches=CATEGORY_FALLBACK.filter(x=>x.name.toLowerCase().includes(q)||q.includes(x.name.toLowerCase().split(' ')[0]));
+   box.innerHTML=matches.length
+     ?`<div style="padding:8px 10px;color:var(--warn);font-size:10px;border-bottom:1px solid var(--line)">Live category search unavailable. These are curated starting points; verify the final leaf on publish.</div>`+
+      matches.map(c=>`<div class="catrow leaf" onclick="SWISH.chooseCategory('${esc(c.id)}','${esc(c.name)}')"><span>${esc(c.name)}</span><span class="arrow">✓</span></div>`).join('')
+     :`<div class="empty">${esc(msg)}</div>`;
+ }finally{
+   clearTimeout(timer);
+ }
 }
+
 function loadCategoryCrumb(i){const c=state.category.crumbs[i];state.category.crumbs=state.category.crumbs.slice(0,i+1);loadCategories(c.id)}
 function chooseCategory(id,name){
  state.editor.categoryId=id;state.editor.categoryName=name;closeModal();openEditor();loadAspectsIfNeeded();toast('Category selected','good');
