@@ -3,484 +3,1401 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0a0a0a">
-<title>SWISH — Coin Scan</title>
+<meta name="theme-color" content="#07111f">
+<title>SWISH — Full Web Seller Intelligence</title>
 <style>
 :root{
-  --bg:#050505;--panel:#111;--panel2:#171717;--line:#2a2a2a;
-  --text:#fff;--muted:#a9a9a9;--accent:#ff9f1c;--green:#32d583;--red:#ff5b5b;
+ --bg:#07111f;--panel:#0d1a2c;--panel2:#10223a;--panel3:#132945;--line:#1d3552;
+ --text:#eef5ff;--muted:#91a5bd;--accent:#5b8cff;--accent2:#7ca5ff;
+ --good:#39d39a;--warn:#ffbf69;--bad:#ff6b7a;--purple:#a47cff;
+ --radius:16px;--shadow:0 12px 40px rgba(0,0,0,.22)
 }
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);
-  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
-button,input{font:inherit}
-button{border:0}
-.app{min-height:100%;display:flex;flex-direction:column;background:#000}
-.top{position:fixed;z-index:20;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 12px) 16px 10px;
-  display:flex;align-items:center;justify-content:space-between;
-  background:linear-gradient(#000b,transparent)}
-.brand{font-weight:800;letter-spacing:.04em;font-size:17px;background:none;color:#fff;padding:0;cursor:pointer}
-.status{font-size:12px;color:#ddd;background:#0008;padding:7px 10px;border-radius:999px;backdrop-filter:blur(8px)}
-.camera{position:relative;flex:1;min-height:100svh;overflow:hidden;background:#050505}
-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.preview{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
-.shade{position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,transparent 0 31%,#0009 32% 100%);pointer-events:none}
-.guide{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);
-  width:min(78vw,390px);aspect-ratio:1;border:2px solid #fff9;border-radius:50%;
-  box-shadow:0 0 0 9999px #0000;pointer-events:none}
-.guide:before,.guide:after{content:"";position:absolute;background:#fff8}
-.guide:before{width:24px;height:2px;left:50%;top:-2px;transform:translateX(-50%)}
-.guide:after{height:24px;width:2px;left:-2px;top:50%;transform:translateY(-50%)}
-.corner{position:absolute;width:28px;height:28px;border-color:#fff;border-style:solid}
-.c1{left:-2px;top:-2px;border-width:4px 0 0 4px;border-radius:12px 0 0 0}
-.c2{right:-2px;top:-2px;border-width:4px 4px 0 0;border-radius:0 12px 0 0}
-.c3{left:-2px;bottom:-2px;border-width:0 0 4px 4px;border-radius:0 0 0 12px}
-.c4{right:-2px;bottom:-2px;border-width:0 4px 4px 0;border-radius:0 0 12px 0}
-.hint{position:absolute;top:calc(env(safe-area-inset-top) + 70px);left:20px;right:20px;text-align:center;
-  font-size:15px;color:#fff;text-shadow:0 1px 8px #000;font-weight:650}
-.subhint{position:absolute;top:calc(env(safe-area-inset-top) + 96px);left:30px;right:30px;text-align:center;
-  font-size:12px;color:#ddd;text-shadow:0 1px 8px #000}
-.controls{position:absolute;left:0;right:0;bottom:0;padding:18px 20px calc(env(safe-area-inset-bottom) + 22px);
-  background:linear-gradient(transparent,#000e 45%);display:flex;align-items:center;justify-content:center;gap:28px}
-.circleBtn{width:58px;height:58px;border-radius:50%;background:#191919dd;color:#fff;border:1px solid #ffffff33;
-  display:grid;place-items:center;box-shadow:0 8px 24px #0008;cursor:pointer}
-.capture{width:82px;height:82px;border-radius:50%;background:#fff;border:7px solid #ffffff55;
-  box-shadow:0 0 0 2px #fff;cursor:pointer;transition:.15s}
-.capture:active{transform:scale(.94)}
-.capture.busy{opacity:.5;cursor:wait}
-.torch.on{background:#ff9f1c;color:#000}
-.file{display:none}
-.panel{position:fixed;z-index:30;left:0;right:0;bottom:0;max-height:78svh;overflow:auto;
-  background:#0c0c0cf5;border-top:1px solid #ffffff18;border-radius:26px 26px 0 0;
-  padding:18px 18px calc(env(safe-area-inset-bottom) + 22px);backdrop-filter:blur(18px);display:none}
-.panel.open{display:block}
-.handle{width:42px;height:4px;background:#555;border-radius:99px;margin:0 auto 18px}
-.row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-h2{margin:0 0 4px;font-size:24px}
-.muted{color:var(--muted);font-size:13px;line-height:1.45}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;margin-top:12px}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.metric{background:var(--panel2);border-radius:12px;padding:12px}
-.metric b{display:block;font-size:18px;margin-top:3px}
-.label{font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.08em}
-.btn{width:100%;padding:14px 16px;border-radius:13px;font-weight:750;cursor:pointer;margin-top:10px}
-.primary{background:var(--accent);color:#000}
-.secondary{background:#202020;color:#fff;border:1px solid #333}
-.good{color:var(--green)}
-.warn{color:var(--accent)}
-.error{color:var(--red)}
-.measure input{width:100%;margin-top:7px;background:#090909;color:#fff;border:1px solid #333;border-radius:10px;
-  padding:12px;outline:none}
-.measure input:focus{border-color:var(--accent)}
-.spinner{width:22px;height:22px;border:3px solid #ffffff22;border-top-color:var(--accent);border-radius:50%;
-  animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
-@keyframes spin{to{transform:rotate(360deg)}}
-#toast{position:fixed;z-index:100;left:16px;right:16px;bottom:18px;background:#181818;color:#fff;
-  padding:13px 15px;border-radius:12px;border:1px solid #333;display:none;box-shadow:0 10px 30px #000}
-canvas{display:none}
-.small{font-size:11px;color:#888}
-.source{word-break:break-all;color:#bdbdbd}
-@media(min-width:700px){
-  .camera{max-width:520px;width:520px;margin:auto;border-left:1px solid #222;border-right:1px solid #222}
-  .top{max-width:520px;left:50%;right:auto;width:520px;transform:translateX(-50%)}
-  .panel{max-width:520px;left:50%;right:auto;width:520px;transform:translateX(-50%)}
-}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+body{overflow-x:hidden}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.45;cursor:not-allowed}
+.app{min-height:100vh;display:flex}
+.sidebar{position:fixed;z-index:20;left:0;top:0;bottom:0;width:258px;background:#081525;border-right:1px solid var(--line);padding:16px 12px;overflow:auto}
+.brand{font-size:25px;font-weight:900;letter-spacing:.4px;padding:7px 10px 18px}
+.brand span{color:var(--accent2)}
+.workspace{font-size:10px;color:#66809f;text-transform:uppercase;letter-spacing:1.2px;padding:0 10px 12px}
+.navgroup{margin-top:16px}
+.navgroup-title{font-size:10px;color:#5f7691;text-transform:uppercase;letter-spacing:1.2px;margin:0 10px 6px;font-weight:800}
+.nav{width:100%;border:0;background:transparent;color:#9db0c8;text-align:left;padding:10px 11px;border-radius:11px;margin:2px 0;font-size:13px;display:flex;align-items:center;gap:10px}
+.nav:hover,.nav.active{background:#142845;color:#fff}
+.nav .ico{width:18px;text-align:center;opacity:.9}
+.nav .badge{margin-left:auto;background:#233b5c;color:#bcd0ea;border-radius:999px;padding:2px 6px;font-size:9px}
+.main{margin-left:258px;width:calc(100% - 258px);padding:20px;max-width:1700px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:18px}
+.heading h1{font-size:28px;line-height:1.05;margin:0 0 5px}
+.heading p{margin:0;color:var(--muted);font-size:12px}
+.top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.connection{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--panel);padding:9px 12px;border-radius:12px;color:var(--muted);font-size:11px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}
+.dot.good{background:var(--good)}
+.btn{border:1px solid var(--line);background:#132a49;color:#fff;padding:9px 12px;border-radius:10px;font-weight:750;font-size:12px}
+.btn:hover{background:#1a3961}
+.btn.primary{background:var(--accent);border-color:var(--accent)}
+.btn.good{background:#123e32;border-color:#246b55}
+.btn.danger{background:#421b24;border-color:#71313d}
+.btn.ghost{background:transparent}
+.btn.small{padding:6px 9px;font-size:11px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.grid2{display:grid;grid-template-columns:1.3fr .7fr;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.metric .label{color:var(--muted);font-size:11px}
+.metric .value{font-size:28px;font-weight:900;margin:7px 0}
+.metric .sub{font-size:10px;color:#7088a5}
+.section{margin-top:14px}
+.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 10px}
+.section-title h2{font-size:15px;margin:0}
+.muted{color:var(--muted)}
+.smalltext{font-size:11px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.searchbar{display:flex;gap:8px}
+.searchbar input{flex:1}
+input,textarea,select{background:#091626;color:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 11px;outline:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{min-height:110px;resize:vertical}
+label{display:block;color:#8499b1;font-size:10px;font-weight:750;margin-bottom:5px}
+.field{margin-bottom:11px}
+.fields2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.full{grid-column:1/-1}
+.tablewrap{overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th,td{padding:10px 8px;border-bottom:1px solid #192d45;text-align:left;vertical-align:middle}
+th{color:#7087a2;font-size:9px;text-transform:uppercase;letter-spacing:.8px}
+tr.clickable:hover{background:#10233a;cursor:pointer}
+.pill{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;background:#162d4b;color:#aac0dc;font-size:9px}
+.pill.good{background:#123c31;color:#6de1b8}
+.pill.warn{background:#44341d;color:#ffd18a}
+.pill.bad{background:#431c25;color:#ff9aa5}
+.pill.purple{background:#2d2148;color:#c4a8ff}
+.list{display:flex;flex-direction:column;gap:8px}
+.rowitem{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #19304b;border-radius:11px;background:#0a1728}
+.thumb{width:52px;height:52px;border-radius:9px;object-fit:cover;background:#091626;border:1px solid var(--line)}
+.thumb.empty{display:flex;align-items:center;justify-content:center;color:#5f7691;font-size:18px}
+.rowmain{flex:1;min-width:0}
+.rowtitle{font-size:12px;font-weight:750;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rowsub{font-size:10px;color:var(--muted);margin-top:3px}
+.empty{padding:28px;text-align:center;color:var(--muted);border:1px dashed #27415f;border-radius:12px}
+.agent{min-height:145px}
+.agent h3{font-size:13px;margin:0 0 7px}
+.agent p{font-size:11px;line-height:1.5;color:var(--muted);margin:0 0 13px}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.toolbar .grow{flex:1}
+.statline{display:flex;gap:10px;flex-wrap:wrap}
+.statchip{background:#0a1728;border:1px solid var(--line);border-radius:10px;padding:7px 9px;font-size:10px;color:#9eb3ca}
+.log{font:10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:#06101c;border:1px solid var(--line);border-radius:10px;padding:11px;white-space:pre-wrap;max-height:280px;overflow:auto;color:#9db3cc}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:50;display:flex;align-items:center;justify-content:center;padding:18px}
+.modal.hidden{display:none}
+.modalbox{background:#0b192b;border:1px solid #2a4565;border-radius:18px;width:min(1050px,100%);max-height:94vh;overflow:auto;box-shadow:0 25px 80px #0008}
+.modalhead{position:sticky;top:0;z-index:2;background:#0b192b;border-bottom:1px solid var(--line);padding:15px 17px;display:flex;justify-content:space-between;align-items:center}
+.modalhead h2{font-size:17px;margin:0}
+.close{border:0;background:none;color:#a9bed6;font-size:25px}
+.modalbody{padding:17px}
+.editor-grid{display:grid;grid-template-columns:1.35fr .65fr;gap:15px}
+.editor-section{background:#0d1b2e;border:1px solid var(--line);border-radius:13px;padding:13px;margin-bottom:12px}
+.editor-section h3{font-size:12px;margin:0 0 10px}
+.category-browser{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.category-list{max-height:390px;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.catrow{padding:10px;border-bottom:1px solid #19304a;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:11px}
+.catrow:hover{background:#132945}
+.catrow.leaf{cursor:pointer}
+.catrow .arrow{color:#7189a5}
+.aspect-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.aspect{background:#091626;border:1px solid #1a314b;border-radius:10px;padding:9px}
+.aspect.required{border-color:#6b3540}
+.aspect .aspect-name{font-size:10px;color:#91a5bd;margin-bottom:5px}
+.aspect input,.aspect select{padding:8px;font-size:11px}
+.image-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.image-tile{position:relative;aspect-ratio:1;background:#091626;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.image-tile img{width:100%;height:100%;object-fit:cover}
+.image-tile button{position:absolute;right:4px;top:4px;width:22px;height:22px;border:0;border-radius:50%;background:#000a;color:#fff}
+.camera-box{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.capture{border:1px dashed #365272;border-radius:13px;min-height:210px;background:#091626;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.capture img{width:100%;height:100%;object-fit:contain}
+.capture .capture-label{position:absolute;left:10px;top:10px;background:#0009;border-radius:7px;padding:5px 7px;font-size:9px}
+.bottom-actions{position:sticky;bottom:0;background:#0b192b;border-top:1px solid var(--line);padding:12px 17px;display:flex;justify-content:flex-end;gap:8px}
+.toast{position:fixed;right:18px;bottom:18px;z-index:100;background:#10243b;border:1px solid #315070;border-radius:12px;padding:11px 13px;box-shadow:var(--shadow);font-size:11px;max-width:360px}
+.toast.good{border-color:#2e745e}.toast.bad{border-color:#743440}
+.mobilebar{display:none}
+.hidden{display:none!important}
+@media(max-width:1100px){.grid4{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:repeat(2,1fr)}.grid2,.editor-grid{grid-template-columns:1fr}}
+@media(max-width:760px){
+.sidebar{display:none}.main{margin-left:0;width:100%;padding:14px 12px 78px}.grid4{grid-template-columns:1fr 1fr}.grid3{grid-template-columns:1fr}.fields2,.category-browser,.aspect-grid,.camera-box{grid-template-columns:1fr}.topbar{align-items:flex-start}.heading h1{font-size:23px}.top-actions .desktop{display:none}.mobilebar{position:fixed;display:flex;z-index:30;left:0;right:0;bottom:0;background:#081525;border-top:1px solid var(--line);justify-content:space-around;padding:7px 4px}.mobilebar button{border:0;background:none;color:#9db2ca;font-size:9px}.image-grid{grid-template-columns:repeat(3,1fr)}.modal{padding:8px}.modalbox{max-height:96vh}.modalbody{padding:12px}}
 </style>
 </head>
 <body>
 <div class="app">
-  <header class="top">
-    <button class="brand" id="dashboardBtn" type="button" title="Back to SWISH Dashboard">SWISH</button>
-    <div class="status" id="status">READY</div>
-  </header>
+<aside class="sidebar">
+  <div class="brand">S<span>WISH</span></div>
+  <div class="workspace" id="workspaceName">Seller workspace</div>
 
-  <main class="camera">
-    <video id="video" autoplay playsinline muted></video>
-    <img id="preview" class="preview" alt="Captured item">
-    <div class="shade"></div>
-    <div class="guide">
-      <span class="corner c1"></span><span class="corner c2"></span>
-      <span class="corner c3"></span><span class="corner c4"></span>
+  <div class="navgroup">
+    <div class="navgroup-title">Seller Hub</div>
+    <button class="nav active" data-page="dashboard"><span class="ico">⌂</span>Dashboard</button>
+    <button class="nav" data-page="listings"><span class="ico">▣</span>Listings</button>
+    <button class="nav" data-page="inventory"><span class="ico">◫</span>Inventory</button>
+    <button class="nav" data-page="orders"><span class="ico">▤</span>Orders</button>
+    <button class="nav" data-page="offers"><span class="ico">◉</span>Offers <span class="badge" id="offersBadge"></span></button>
+    <button class="nav" data-page="messages"><span class="ico">✉</span>Messages <span class="badge" id="messagesBadge"></span></button>
+    <button class="nav" data-page="returns"><span class="ico">↩</span>Returns <span class="badge" id="returnsBadge"></span></button>
+    <button class="nav" data-page="cases"><span class="ico">⚑</span>Cases <span class="badge" id="casesBadge"></span></button>
+  </div>
+
+  <div class="navgroup">
+    <div class="navgroup-title">Money & performance</div>
+    <button class="nav" data-page="finances"><span class="ico">£</span>Finances</button>
+    <button class="nav" data-page="analytics"><span class="ico">◒</span>Analytics</button>
+  </div>
+
+  <div class="navgroup">
+    <div class="navgroup-title">eBay Account</div>
+    <button class="nav" data-page="account"><span class="ico">●</span>eBay Account</button>
+    <button class="nav" data-page="money"><span class="ico">£</span>Money</button>
+  </div>
+  <div class="navgroup">
+    <div class="navgroup-title">SWISH Intelligence</div>
+    <button class="nav" data-page="intelligence"><span class="ico">✦</span>Command Centre</button>
+    <button class="nav" data-page="research"><span class="ico">⌁</span>Research Agent</button>
+    <button class="nav" data-page="scan"><span class="ico">◎</span>Coin Scan</button>
+    <button class="nav" data-page="calculations"><span class="ico">∑</span>Calculations</button>
+    <button class="nav" data-page="islamic"><span class="ico">◈</span>Islamic Batch ID</button>
+  </div>
+
+  <div class="navgroup">
+    <div class="navgroup-title">SWISH Operations</div>
+    <button class="nav" data-page="acquisitions"><span class="ico">◎</span>Acquisitions</button>
+    <button class="nav" data-page="opportunities"><span class="ico">◆</span>Opportunities</button>
+    <button class="nav" data-page="dispatch"><span class="ico">⇢</span>Dispatch</button>
+    <button class="nav" data-page="tasks"><span class="ico">✓</span>Tasks</button>
+    <button class="nav" data-page="review"><span class="ico">!</span>Review Required</button>
+    <button class="nav" data-page="repricing"><span class="ico">£</span>Repricing</button>
+    <button class="nav" data-page="audit"><span class="ico">◌</span>Audit</button>
+  </div>
+  <div class="navgroup">
+    <div class="navgroup-title">Data & control</div>
+    <button class="nav" data-page="import"><span class="ico">⇩</span>eBay Import</button>
+    <button class="nav" data-page="sync"><span class="ico">↻</span>Sync & Images</button>
+    <button class="nav" data-page="csv"><span class="ico">▦</span>CSV Reconciliation</button>
+    <button class="nav" data-page="marketplaces"><span class="ico">◇</span>Marketplaces</button>
+    <button class="nav" data-page="settings"><span class="ico">⚙</span>Settings</button>
+    <button class="nav" data-page="admin"><span class="ico">♙</span>eBay Admin</button>
+    <button class="nav" data-page="log"><span class="ico">▤</span>System Log</button>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="heading">
+      <h1 id="pageTitle">Dashboard</h1>
+      <p id="pageSub">eBay Seller Hub · SWISH intelligence layer</p>
     </div>
-    <div class="hint" id="hint">Place the coin inside the circle</div>
-    <div class="subhint">Fill the frame • avoid glare • hold steady</div>
-
-    <div class="controls">
-      <button class="circleBtn" id="libraryBtn" title="Choose photo">＋</button>
-      <button class="capture" id="captureBtn" aria-label="Scan"></button>
-      <button class="circleBtn torch" id="torchBtn" title="Torch">☼</button>
-      <input id="fileInput" class="file" type="file" accept="image/*" capture="environment">
+    <div class="top-actions">
+      <button class="btn primary desktop" onclick="SWISH.newListing()">＋ New listing</button>
+      <button class="btn desktop" onclick="SWISH.sync()">↻ Sync</button>
+      <div class="connection"><i class="dot" id="statusDot"></i><span id="statusText">Checking…</span></div>
     </div>
-  </main>
-
-  <section class="panel" id="resultPanel">
-    <div class="handle"></div>
-    <div id="result"></div>
-  </section>
-
-  <canvas id="canvas"></canvas>
-  <div id="toast"></div>
+  </div>
+  <div id="view"></div>
+</main>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-/*
-  SWISH WEB SCANNER
-  -----------------
-  This is a single-file web camera scanner designed to mirror the native SWISH
-  scan flow. Replace only the two public Supabase values below.
+<div class="mobilebar">
+ <button data-page="dashboard">⌂<br>Home</button>
+ <button data-page="listings">▣<br>Listings</button>
+ <button data-page="inventory">◫<br>Stock</button>
+ <button data-page="orders">▤<br>Orders</button>
+ <button data-page="scan">◎<br>Scan</button>
+ <button data-page="intelligence">✦<br>AI</button>
+</div>
 
-  IMPORTANT:
-  - Never put eBay client secrets/tokens here.
-  - Never put Numista private/server credentials here.
-  - All protected API work belongs in Supabase Edge Functions.
+<div class="modal hidden" id="modal">
+ <div class="modalbox">
+   <div class="modalhead"><h2 id="modalTitle"></h2><button class="close" onclick="SWISH.closeModal()">×</button></div>
+   <div class="modalbody" id="modalBody"></div>
+ </div>
+</div>
+<div id="toastHost"></div>
+
+<script>
+'use strict';
+
+/*
+ SWISH DREAM WEB
+ - Single-file browser front end for the existing SWISH / OnSpace backend.
+ - No new database.
+ - No eBay secrets in the browser.
+ - Existing privileged eBay operations remain behind Edge Functions.
+ - Uses the actual routes/tables discovered in the existing SWISH source.
 */
 
-const SUPABASE_URL = 'https://iwgaqieyoahmcjfziwga.backend.onspace.ai';
-// CHILD PAGE: this scanner is opened from the SWISH Dashboard parent page.
-const DASHBOARD_URL = './dashboard.html';
+const CFG={
+  url:'https://iwgaqieyoahmcjfziwga.backend.onspace.ai',
+  anon:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3ODkwNjM4MTgsImV4cCI6MjEwNDQyMzgxOCwicmVmIjoiaXdnYXFpZXlvYWhtY2pmeml3Z2EiLCJyb2xlIjoiYW5vbiIsImlzcyI6Im9uc3BhY2UifQ.cioQ38guPLFAbl3x48mUaJcMSxU5IpZn7-H-JhtvXJc'
+};
 
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3ODkwNjM4MTgsImV4cCI6MjEwNDQyMzgxOCwicm9sZSI6ImFub24iLCJpc3MiOiJvbnNwYWNlIn0.cioQ38guPLFAbl3x48mUaJcMSxU5IpZn7-H-JhtvXJc';
+const FN={
+ browse:'swish-ebay-browse',
+ list:'swish-ebay-list',
+ taxonomy:'swish-ebay-taxonomy',
+ messages:'swish-ebay-messages',
+ orders:'swish-ebay-orders',
+ postOrder:'swish-ebay-post-order',
+ sync:'swish-ebay-sync',
+ identify:'swish-identify',
+ islamic:'swish-islamic-identify',
+ image:'swish-image-download',
+ reprice:'swish-reprice',
+ decompose:'swish-decompose',
+ marketValue:'swish-market-value',
+ generate:'swish-list-generate'
+};
 
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let session=null, tenantId=null;
+const state={
+ page:'dashboard', token:localStorage.getItem('swish_access_token')||'',
+ refresh:localStorage.getItem('swish_refresh_token')||'',
+ user:null, tenant:null, connector:null, cache:{}, log:[],
+ listingFilter:'all', listingSearch:'', inventorySearch:'',
+ editor:null, category:{parent:'',crumbs:[],items:[],loading:false,search:''},
+ aspects:[], toastTimer:null
+};
 
-const $ = id => document.getElementById(id);
-const video = $("video"), preview = $("preview"), canvas = $("canvas");
-const statusEl = $("status"), hint = $("hint"), panel = $("resultPanel"), result = $("result");
-let stream = null, capturedBlob = null, torchOn = false, busy = false, lastResult = null;
+const PAGES={
+ dashboard:['Dashboard','eBay Seller Hub · SWISH intelligence layer'], listings:['Listings','Create, edit, revise and publish eBay listings'], inventory:['Inventory','Canonical stock and listing readiness'], orders:['Orders','Fulfilment and customer operations'], offers:['Offers','Buyer negotiations and watcher opportunities'], messages:['Messages','Buyer communications and response workflow'], returns:['Returns','Returns, refunds and deadlines'], cases:['Cases','Disputes, INR and SNAD cases'], finances:['Finances','Sales, fees, payouts and commercial performance'], analytics:['Analytics','Performance and operational intelligence'], intelligence:['Command Centre','One screen for what needs attention and what SWISH can do'], research:['Research Agent','Natural-language market research and opportunity decomposition'], scan:['Coin Scan','Camera-first identification and evidence-backed valuation'], islamic:['Islamic Batch ID','Batch identification for Islamic / Indian silver and countermarks'], calculations:['Calculations','Reusable commercial formulas and custom variables'], acquisitions:['Acquisitions','Purchase pipeline, lots, sources and candidate stock'], opportunities:['Opportunities','Commercial opportunities, margins, confidence and evidence'], dispatch:['Dispatch','Orders, packing, tracking and operational handoff'], tasks:['Tasks','Action queue generated by SWISH'], review:['Review Required','Items and listings that need human verification'], repricing:['Repricing','Controlled eBay price changes using saved rules'], audit:['Audit','Activity and decision trail'], csv:['CSV Reconciliation','Compare eBay CSV inventory with SWISH inventory'], marketplaces:['Marketplaces','eBay marketplace connection and capability status'], account:['eBay Account','Seller account, policies and connection status'], money:['Money','Commercial view of revenue, fees, cost and margin'], admin:['eBay Admin','eBay operational controls and policy metadata'], import:['eBay Import','CSV reconciliation and controlled import'], sync:['Sync & Images','eBay synchronisation and canonical image pipeline'], settings:['Settings','Connection, policies and workspace controls'], log:['System Log','Diagnostics and backend activity']
+};
 
-function toast(msg){
-  const t=$("toast"); t.textContent=msg; t.style.display="block";
-  clearTimeout(window.__toast); window.__toast=setTimeout(()=>t.style.display="none",3000);
-}
-function setStatus(s){statusEl.textContent=s}
-function escapeHtml(v){
-  return String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+
+function esc(v){
+ return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 function money(v){
-  if(v==null || isNaN(Number(v))) return "—";
-  return "£"+Number(v).toFixed(2);
+ const n=Number(v); return Number.isFinite(n)?'£'+n.toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
 }
-function pct(v){
-  if(v==null) return "—";
-  const n=Number(v); return (n<=1 ? n*100 : n).toFixed(0)+"%";
+function date(v){
+ if(!v)return '—'; const d=new Date(v); return isNaN(d)?'—':d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
 }
-
-async function startCamera(){
-  if(!navigator.mediaDevices?.getUserMedia){
-    toast("Camera access is not available in this browser.");
+function timeAgo(v){
+ if(!v)return '—'; const ms=Date.now()-new Date(v).getTime(),m=Math.floor(ms/60000);
+ if(m<1)return 'just now'; if(m<60)return m+'m ago'; const h=Math.floor(m/60); if(h<24)return h+'h ago'; return Math.floor(h/24)+'d ago';
+}
+function toast(msg,type=''){
+ const h=$('#toastHost'); h.innerHTML='<div class="toast '+type+'">'+esc(msg)+'</div>';
+ clearTimeout(state.toastTimer); state.toastTimer=setTimeout(()=>h.innerHTML='',3500);
+}
+function log(msg){
+ state.log.unshift(new Date().toLocaleTimeString()+'  '+msg);
+ if(state.log.length>150)state.log.pop();
+ const el=$('#logbox'); if(el)el.textContent=state.log.join('\n');
+}
+function headers(){
+ return {'Content-Type':'application/json','apikey':CFG.anon,'Authorization':'Bearer '+(state.token||CFG.anon)};
+}
+async function rest(table,query={},method='GET',body=null){
+ const qs=new URLSearchParams();
+ Object.entries(query).forEach(([k,v])=>{if(v!==undefined&&v!==null)qs.set(k,String(v));});
+ const r=await fetch(CFG.url+'/rest/v1/'+table+(qs.toString()?'?'+qs:''),{
+   method,headers:Object.assign(headers(),{'Accept':'application/json','Prefer':'return=representation'}),body:body?JSON.stringify(body):undefined
+ });
+ const txt=await r.text(); let d; try{d=txt?JSON.parse(txt):null}catch{d={raw:txt}}
+ if(!r.ok)throw new Error(d?.message||d?.error||d?.hint||('HTTP '+r.status));
+ return d;
+}
+async function fn(name,body={}){
+ log('→ '+name);
+ const r=await fetch(CFG.url+'/functions/v1/'+name,{method:'POST',headers:headers(),body:JSON.stringify(body)});
+ const txt=await r.text(); let d; try{d=txt?JSON.parse(txt):null}catch{d={raw:txt}}
+ if(!r.ok)throw new Error(d?.error||d?.message||('HTTP '+r.status));
+ if(d?.error && d?.success===false)throw new Error(d.error);
+ log('✓ '+name);
+ return d;
+}
+async function signIn(email,password){
+ const r=await fetch(CFG.url+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'Content-Type':'application/json','apikey':CFG.anon},body:JSON.stringify({email,password})});
+ const d=await r.json(); if(!r.ok)throw new Error(d.error_description||d.msg||d.error||'Sign in failed');
+ state.token=d.access_token;state.refresh=d.refresh_token||'';state.user=d.user||null;
+ localStorage.setItem('swish_access_token',state.token);if(state.refresh)localStorage.setItem('swish_refresh_token',state.refresh);
+}
+async function loadTenant(){
+ const rows=await rest('tenants',{select:'id,name,slug,subscription_tier,settings,created_at',order:'created_at.asc',limit:1});
+ state.tenant=Array.isArray(rows)?rows[0]:null;
+ if(!state.tenant)throw new Error('No SWISH tenant found for this account.');
+ state.connector=await rest('marketplace_connectors',{select:'status,access_token_expires_at,seller_account_id,last_sync_at,can_publish,selected_fulfillment_policy_id,selected_return_policy_id',tenant_id:'eq.'+state.tenant.id,marketplace_id:'eq.ebay',limit:1}).then(x=>x?.[0]||null).catch(()=>null);
+ $('#workspaceName').textContent=state.tenant.name||'Seller workspace';
+}
+function setStatus(){
+ const ok=!!state.tenant;
+ $('#statusDot').className='dot '+(ok?'good':'');
+ $('#statusText').textContent=ok?'Live · '+(state.tenant.name||'SWISH'):'Sign in required';
+}
+async function bootstrap(){
+ try{
+  if(state.token){try{await loadTenant()}catch{state.token='';localStorage.removeItem('swish_access_token');}}
+  setStatus(); render();
+  if(state.tenant){await refreshDashboard();}else showLogin();
+ }catch(e){log('BOOT: '+e.message);setStatus();render();}
+}
+function showLogin(){
+ openModal('Sign in to SWISH',`
+ <p class="muted smalltext">Use your existing SWISH account. This browser uses the existing authentication and backend; it does not create a new database.</p>
+ <div class="field"><label>Email</label><input id="loginEmail" type="email" autocomplete="email"></div>
+ <div class="field"><label>Password</label><input id="loginPass" type="password" autocomplete="current-password"></div>
+ <div class="actions"><button class="btn primary" onclick="SWISH.login()">Sign in</button><button class="btn ghost" onclick="SWISH.closeModal()">View shell</button></div>
+ <div id="loginError" class="smalltext" style="color:var(--bad);margin-top:10px"></div>`);
+}
+async function login(){
+ try{await signIn($('#loginEmail').value.trim(),$('#loginPass').value);await loadTenant();closeModal();setStatus();render();await refreshDashboard();toast('Signed in','good')}
+ catch(e){$('#loginError').textContent=e.message}
+}
+function openModal(title,body,extraClass=''){ $('#modalTitle').textContent=title;$('#modalBody').innerHTML=body;$('#modal').classList.remove('hidden'); }
+function closeModal(){ $('#modal').classList.add('hidden'); }
+function go(page){
+  if(!PAGES[page])return;
+  // Coin Scan is a CHILD PAGE. The SWISH Dashboard remains the parent page.
+  if(page==='scan'){
+    window.location.href='./coin-scan.html';
     return;
   }
-  try{
-    stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},
-      audio:false
-    });
-    video.srcObject=stream;
-    const track=stream.getVideoTracks()[0];
-    const caps=track.getCapabilities?.() || {};
-    $("torchBtn").style.display = caps.torch ? "grid" : "grid";
-    setStatus("CAMERA READY");
-  }catch(e){
-    setStatus("CAMERA BLOCKED");
-    toast("Allow camera access, then reload SWISH.");
-  }
+  state.page=page;
+  render();
+  window.scrollTo(0,0);
+}
+function navBind(){
+ $$('.nav,[data-page]').forEach(b=>b.onclick=()=>go(b.dataset.page));
+}
+function render(){
+ const [title,sub]=PAGES[state.page]||PAGES.dashboard;
+ $('#pageTitle').textContent=title;$('#pageSub').textContent=sub;
+ $$('.nav').forEach(b=>b.classList.toggle('active',b.dataset.page===state.page));
+ const views={
+  dashboard:renderDashboard,listings:renderListings,inventory:renderInventory,orders:renderOrders,
+  offers:renderOffers,messages:renderMessages,returns:renderReturns,cases:renderCases,
+  finances:renderFinances,analytics:renderAnalytics,intelligence:renderIntelligence,research:renderResearch,
+  scan:renderScan,islamic:renderIslamic,calculations:renderCalculations,research:renderResearch,
+  acquisitions:renderAcquisitions,opportunities:renderOpportunities,dispatch:renderDispatch,tasks:renderTasks,review:renderReview,repricing:renderRepricing,audit:renderAudit,
+  csv:renderCsv,marketplaces:renderMarketplaces,account:renderAccount,money:renderMoney,admin:renderAdmin,
+  import:renderImport,sync:renderSync,settings:renderSettings,log:renderLog
+ };
+ $('#view').innerHTML=views[state.page]();
+ navBind();
+ if(state.page==='listings')loadListings();
+ if(state.page==='inventory')loadInventory();
+ if(state.page==='orders')loadOrders();
+ if(state.page==='offers')loadOffers();
+ if(state.page==='messages')loadMessages();
+ if(state.page==='returns')loadReturns();
+ if(state.page==='cases')loadCases();
+ if(state.page==='finances')loadFinancesData();
+ if(state.page==='analytics')loadAnalytics();
+ if(state.page==='settings')loadSettings();
+}
+async function refreshDashboard(){
+ if(!state.tenant)return;
+ const tid=state.tenant.id, start=new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString();
+ try{
+  const [listings,items,orders,msg,returns,cases,offers,sales,fin]=await Promise.all([
+   rest('listings',{select:'id,status,price',tenant_id:'eq.'+tid,marketplace_id:'eq.ebay',limit:2000}),
+   rest('items',{select:'id,status,quantity',tenant_id:'eq.'+tid,limit:2000}),
+   rest('orders',{select:'id,fulfilment_status',tenant_id:'eq.'+tid,marketplace_id:'eq.ebay',limit:2000}),
+   rest('ebay_messages',{select:'id',tenant_id:'eq.'+tid,is_read:'eq.false',direction:'eq.inbound',limit:1000}),
+   rest('ebay_returns',{select:'id',tenant_id:'eq.'+tid,status:'not.eq.closed',limit:1000}).catch(()=>[]),
+   rest('ebay_cases',{select:'id,status',tenant_id:'eq.'+tid,limit:1000}).catch(()=>[]),
+   rest('ebay_offers',{select:'id,status',tenant_id:'eq.'+tid,status:'eq.pending',limit:1000}).catch(()=>[]),
+   rest('sales',{select:'sale_price,net_revenue,sold_at',tenant_id:'eq.'+tid,marketplace_id:'eq.ebay',sold_at:'gte.'+start,limit:2000}).catch(()=>[]),
+   rest('ebay_financials',{select:'amount,transaction_type,transaction_date',tenant_id:'eq.'+tid,transaction_date:'gte.'+start,limit:5000}).catch(()=>[])
+  ]);
+  const active=listings.filter(x=>x.status==='active').length;
+  const drafts=listings.filter(x=>['draft','pending'].includes(x.status)).length;
+  const stock=items.filter(x=>!['sold','archived'].includes(x.status)).length;
+  const dispatch=orders.filter(x=>['awaiting_dispatch','packing','label_created'].includes(x.fulfilment_status)).length;
+  const revenue=sales.reduce((a,x)=>a+Number(x.sale_price||0),0);
+  const net=sales.reduce((a,x)=>a+Number(x.net_revenue||0),0);
+  state.cache.dashboard={active,drafts,stock,dispatch,revenue,net,unread:msg.length,returns:returns.length,cases:cases.filter(x=>!['closed','resolved'].includes(x.status)).length,offers:offers.length,fin};
+  updateBadges();log('Dashboard refreshed');render();
+ }catch(e){log('Dashboard refresh: '+e.message)}
+}
+function updateBadges(){
+ const d=state.cache.dashboard||{};
+ ['offers','messages','returns','cases'].forEach(k=>{const el=$('#'+k+'Badge');if(el)el.textContent=d[k]||''});
+}
+function metric(label,value,sub){return `<div class="card metric"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div></div>`}
+function renderDashboard(){
+ const d=state.cache.dashboard||{};
+ return `<div class="grid4">
+ ${metric('Active listings',d.active??'—','Live eBay listings')}
+ ${metric('Inventory',d.stock??'—','Canonical stock')}
+ ${metric('Awaiting dispatch',d.dispatch??'—','Orders needing action')}
+ ${metric('Revenue this month',d.revenue===undefined?'—':money(d.revenue),'Gross sales recorded')}
+ </div>
+ <div class="section grid2">
+  <div class="card"><div class="section-title"><h2>Action centre</h2><button class="btn small" onclick="SWISH.refresh()">Refresh</button></div>
+   <div class="list">
+    ${action('Messages',d.unread||0,'Buyer messages awaiting response','messages','high')}
+    ${action('Offers',d.offers||0,'Pending buyer offers','offers','medium')}
+    ${action('Returns',d.returns||0,'Open returns','returns','high')}
+    ${action('Cases',d.cases||0,'Open or unresolved cases','cases','high')}
+    ${action('Draft listings',d.drafts||0,'Listings needing publication or review','listings','medium')}
+   </div>
+  </div>
+  <div class="card"><div class="section-title"><h2>SWISH intelligence</h2></div>
+   <div class="grid2" style="grid-template-columns:1fr 1fr">
+    ${mini('✦','Command Centre','Turn the business into actions','intelligence')}
+    ${mini('⌁','Research','Natural-language opportunity search','research')}
+    ${mini('◎','Coin Scan','Camera-first attribution and value','scan')}
+    ${mini('∑','Calculations','Your commercial formulas','calculations')}
+   </div>
+  </div>
+ </div>
+ <div class="section grid3">
+  ${agent('Listing Quality','Find missing categories, item specifics, images and listing data.','listings')}
+  ${agent('Commercial Intelligence','Separate observed evidence from estimates and calculate opportunity.','calculations')}
+  ${agent('Operations','Prioritise orders, messages, returns and cases by urgency.','orders')}
+ </div>
+ <div class="section card"><div class="section-title"><h2>System activity</h2></div><div id="logbox" class="log">${esc(state.log.join('\\n')||'No activity yet.')}</div></div>`;
+}
+function action(name,count,sub,page,level){return `<div class="rowitem clickable" onclick="SWISH.go('${page}')"><div style="font-size:16px">${level==='high'?'⚠':'•'}</div><div class="rowmain"><div class="rowtitle">${esc(name)}</div><div class="rowsub">${esc(sub)}</div></div><span class="pill ${level==='high'?'bad':''}">${count}</span></div>`}
+function mini(icon,title,sub,page){return `<div class="card" style="padding:11px;cursor:pointer" onclick="SWISH.go('${page}')"><div style="font-size:18px">${icon}</div><b style="font-size:11px">${title}</b><div class="smalltext muted" style="margin-top:4px">${sub}</div></div>`}
+function agent(title,sub,page){return `<div class="card agent"><h3>${title}</h3><p>${sub}</p><button class="btn small" onclick="SWISH.go('${page}')">Open</button></div>`}
+
+async function loadListings(){
+ const el=$('#listingRows');if(!el||!state.tenant)return;
+ try{
+  const rows=await rest('listings',{select:'*,items(id,canonical_title,media,sku,condition,attributes,quantity)',tenant_id:'eq.'+state.tenant.id,marketplace_id:'eq.ebay',order:'updated_at.desc',limit:500});
+  state.cache.listings=rows||[]; drawListings();
+ }catch(e){el.innerHTML='<div class="empty">'+esc(e.message)+'</div>';log('Listings: '+e.message)}
+}
+function drawListings(){
+ const el=$('#listingRows');if(!el)return;
+ let rows=state.cache.listings||[];
+ const q=state.listingSearch.toLowerCase();
+ if(q)rows=rows.filter(r=>(r.title||'').toLowerCase().includes(q)||(r.external_listing_id||'').toLowerCase().includes(q)||(r.items?.sku||'').toLowerCase().includes(q));
+ if(state.listingFilter!=='all')rows=rows.filter(r=>r.status===state.listingFilter);
+ if(!rows.length){el.innerHTML='<div class="empty">No listings match this view.</div>';return}
+ el.innerHTML=rows.map(r=>{
+  const media=Array.isArray(r.items?.media)?r.items.media[0]:null;
+  return `<div class="rowitem">
+   ${media?`<img class="thumb" src="${esc(media)}" onerror="this.style.display='none'">`:'<div class="thumb empty">▣</div>'}
+   <div class="rowmain"><div class="rowtitle">${esc(r.title||r.items?.canonical_title||'Untitled listing')}</div>
+   <div class="rowsub">${esc(r.external_listing_id||'Draft')} · ${money(r.price)} · ${esc(r.status||'')}</div></div>
+   <span class="pill ${r.status==='active'?'good':r.status==='draft'?'warn':''}">${esc(r.status||'')}</span>
+   <button class="btn small" onclick="SWISH.editListing('${r.id}')">Edit</button>
+  </div>`}).join('');
+}
+function renderListings(){
+ return `<div class="card">
+  <div class="toolbar">
+   <div class="searchbar grow"><input id="listingSearch" placeholder="Search title, SKU or eBay item ID" value="${esc(state.listingSearch)}"><button class="btn" onclick="SWISH.searchListings()">Search</button></div>
+   <select id="listingFilter" onchange="SWISH.filterListings(this.value)"><option value="all">All</option><option value="active">Active</option><option value="draft">Draft</option><option value="pending">Pending</option><option value="ended">Ended</option></select>
+   <button class="btn primary" onclick="SWISH.newListing()">＋ New listing</button>
+  </div>
+  <div class="statline">
+   <span class="statchip">eBay architecture: existing</span><span class="statchip">Simple delivery default</span><span class="statchip">Category-aware specifics</span>
+  </div>
+  <div class="section" id="listingRows"><div class="empty">Loading listings…</div></div>
+ </div>`;
+}
+function searchListings(){state.listingSearch=$('#listingSearch').value;drawListings()}
+function filterListings(v){state.listingFilter=v;drawListings()}
+
+async function loadInventory(){
+ const el=$('#inventoryRows');if(!el||!state.tenant)return;
+ try{
+  const rows=await rest('items',{select:'id,sku,canonical_title,status,quantity,condition,condition_notes,media,attributes,updated_at',tenant_id:'eq.'+state.tenant.id,order:'updated_at.desc',limit:800});
+  state.cache.inventory=rows||[];drawInventory();
+ }catch(e){el.innerHTML='<div class="empty">'+esc(e.message)+'</div>';log('Inventory: '+e.message)}
+}
+function drawInventory(){
+ const el=$('#inventoryRows');let rows=state.cache.inventory||[],q=state.inventorySearch.toLowerCase();
+ if(q)rows=rows.filter(r=>(r.canonical_title||'').toLowerCase().includes(q)||(r.sku||'').toLowerCase().includes(q));
+ el.innerHTML=rows.length?rows.map(r=>{
+  const media=Array.isArray(r.media)?r.media[0]:null;const attrs=r.attributes||{};
+  const imgCount=Array.isArray(r.media)?r.media.length:0;
+  const ready=!!attrs.ebay_category_id&&!!r.canonical_title&&imgCount>0;
+  return `<div class="rowitem"><div class="thumb ${media?'':'empty'}">${media?`<img class="thumb" src="${esc(media)}">`:'◎'}</div><div class="rowmain"><div class="rowtitle">${esc(r.canonical_title||'Untitled')}</div><div class="rowsub">${esc(r.sku||r.id)} · Qty ${r.quantity??1} · ${imgCount} image(s) · ${esc(r.condition||'')}</div></div><span class="pill ${ready?'good':'warn'}">${ready?'Listing ready':'Needs review'}</span><button class="btn small" onclick="SWISH.findListingForItem('${r.id}')">Open</button></div>`
+ }).join(''):'<div class="empty">No inventory found.</div>';
+}
+function renderInventory(){return `<div class="card"><div class="toolbar"><div class="searchbar grow"><input id="inventorySearch" placeholder="Search inventory" value="${esc(state.inventorySearch)}"><button class="btn" onclick="SWISH.searchInventory()">Search</button></div><button class="btn" onclick="SWISH.syncImages()">Fetch missing images</button></div><div id="inventoryRows"><div class="empty">Loading inventory…</div></div></div>`}
+function searchInventory(){state.inventorySearch=$('#inventorySearch').value;drawInventory()}
+async function findListingForItem(itemId){
+ try{const rows=await rest('listings',{select:'id',tenant_id:'eq.'+state.tenant.id,item_id:'eq.'+itemId,marketplace_id:'eq.ebay',order:'updated_at.desc',limit:1});if(rows[0])editListing(rows[0].id);else toast('No listing record yet','bad')}catch(e){toast(e.message,'bad')}
 }
 
-async function toggleTorch(){
-  const track=stream?.getVideoTracks?.()[0];
-  const caps=track?.getCapabilities?.() || {};
-  if(!caps.torch){toast("Torch is not available in this browser/device.");return}
-  torchOn=!torchOn;
-  try{await track.applyConstraints({advanced:[{torch:torchOn}]});$("torchBtn").classList.toggle("on",torchOn)}
-  catch(e){toast("Could not change torch.");}
+async function loadOrders(){
+ const el=$('#orderRows');if(!el||!state.tenant)return;
+ try{const rows=await rest('orders',{select:'*',tenant_id:'eq.'+state.tenant.id,marketplace_id:'eq.ebay',order:'created_at.desc',limit:300});state.cache.orders=rows||[];drawOrders()}catch(e){el.innerHTML='<div class="empty">'+esc(e.message)+'</div>'}
+}
+function drawOrders(){const el=$('#orderRows'),rows=state.cache.orders||[];el.innerHTML=rows.length?`<div class="tablewrap"><table><thead><tr><th>Order</th><th>Buyer</th><th>Total</th><th>Status</th><th>Created</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.external_order_id||r.ebay_order_id||r.id)}</td><td>${esc(r.buyer_username||r.buyer_name||'—')}</td><td>${money(r.total||r.order_total)}</td><td><span class="pill">${esc(r.fulfilment_status||r.status||'')}</span></td><td>${date(r.created_at)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No orders found.</div>'}
+function renderOrders(){return `<div class="card"><div class="toolbar"><button class="btn" onclick="SWISH.syncOrders()">↻ Sync orders</button><div class="grow"></div><span class="statchip">Server-side eBay order access</span></div><div id="orderRows"><div class="empty">Loading orders…</div></div></div>`}
+async function syncOrders(){try{await fn(FN.orders,{tenantId:state.tenant.id,daysBack:90});await loadOrders();toast('Orders synced','good')}catch(e){toast(e.message,'bad')}}
+
+async function loadOffers(){
+ const el=$('#offerRows');if(!el||!state.tenant)return;
+ try{const rows=await rest('ebay_offers',{select:'*,listings(title)',tenant_id:'eq.'+state.tenant.id,order:'created_at.desc',limit:200});state.cache.offers=rows||[];drawOffers()}catch(e){el.innerHTML='<div class="empty">'+esc(e.message)+'</div>'}
+}
+function drawOffers(){const rows=state.cache.offers||[];$('#offerRows').innerHTML=rows.length?`<div class="tablewrap"><table><thead><tr><th>Listing</th><th>Buyer</th><th>Offer</th><th>Status</th><th>Expires</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.listings?.title||r.listing_id||'—')}</td><td>${esc(r.buyer_username||'—')}</td><td>${money(r.offer_amount)}</td><td><span class="pill ${r.status==='pending'?'warn':''}">${esc(r.status||'')}</span></td><td>${date(r.expires_at)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No offers found.</div>'}
+function renderOffers(){return `<div class="card"><div class="toolbar"><button class="btn" onclick="SWISH.syncOffers()">↻ Refresh offers</button></div><div id="offerRows"><div class="empty">Loading offers…</div></div></div>`}
+async function syncOffers(){await loadOffers();toast('Offers refreshed','good')}
+
+async function loadMessages(){
+ const el=$('#messageRows');if(!el||!state.tenant)return;
+ try{const rows=await rest('ebay_messages',{select:'*',tenant_id:'eq.'+state.tenant.id,order:'received_at.desc',limit:250});state.cache.messages=rows||[];drawMessages()}catch(e){el.innerHTML='<div class="empty">'+esc(e.message)+'</div>'}
+}
+function drawMessages(){const rows=state.cache.messages||[];$('#messageRows').innerHTML=rows.length?`<div class="list">${rows.map(r=>`<div class="rowitem clickable" onclick="SWISH.openMessage('${r.id}')"><div class="thumb empty">✉</div><div class="rowmain"><div class="rowtitle">${esc(r.subject||'(no subject)')}</div><div class="rowsub">${esc(r.buyer_username||'Unknown buyer')} · ${timeAgo(r.received_at)} · ${esc((r.body||'').slice(0,110))}</div></div><span class="pill ${r.is_read?'':'warn'}">${r.is_read?'Read':'Unread'}</span></div>`).join('')}</div>`:'<div class="empty">No messages found.</div>'}
+function renderMessages(){return `<div class="card"><div class="toolbar"><button class="btn" onclick="SWISH.syncMessages()">↻ Sync messages</button><div class="grow"></div><span class="statchip">AI draft replies can be added without auto-sending</span></div><div id="messageRows"><div class="empty">Loading messages…</div></div></div>`}
+async function syncMessages(){try{await fn(FN.messages,{route:'sync_messages',tenantId:state.tenant.id,daysBack:30});await loadMessages();toast('Messages synced','good')}catch(e){toast(e.message,'bad')}}
+async function openMessage(id){const r=(state.cache.messages||[]).find(x=>x.id===id);if(!r)return;openModal('Message',`<div class="card"><b>${esc(r.subject||'(no subject)')}</b><p class="muted smalltext">${esc(r.buyer_username||'')}</p><div class="section" style="white-space:pre-wrap;line-height:1.6;font-size:12px">${esc(r.body||'')}</div><div class="actions"><button class="btn primary" onclick="SWISH.replyMessage('${r.id}')">Reply</button></div></div>`)}
+
+async function replyMessage(id){
+ const r=(state.cache.messages||[]).find(x=>x.id===id);if(!r)return;
+ openModal('Reply to buyer',`<div class="field"><label>Reply</label><textarea id="replyText"></textarea></div><button class="btn primary" onclick="SWISH.sendReply('${id}')">Send reply</button>`);
+}
+async function sendReply(id){
+ const r=(state.cache.messages||[]).find(x=>x.id===id);const text=$('#replyText').value.trim();if(!text)return;
+ try{await fn(FN.messages,{route:'send_reply',tenantId:state.tenant.id,messageId:id,replyText:text,buyerUsername:r.buyer_username,ebayItemId:r.ebay_item_id,conversationId:r.conversation_id});closeModal();await loadMessages();toast('Reply sent','good')}catch(e){toast(e.message,'bad')}
 }
 
-function showProcessing(){
-  panel.classList.add("open");
-  result.innerHTML=`
-    <div class="row"><div><h2>Analysing…</h2><div class="muted">SWISH is checking the image, catalogue data and market evidence.</div></div></div>
-    <div class="card"><span class="spinner"></span><b>Identification in progress</b><div class="muted" style="margin-top:8px">Do not close the scanner.</div></div>`;
+async function loadReturns(){
+ const el=$('#returnRows');if(!el||!state.tenant)return;
+ try{state.cache.returns=await rest('ebay_returns',{select:'*',tenant_id:'eq.'+state.tenant.id,order:'created_at.desc',limit:200});drawReturns()}catch(e){el.innerHTML='<div class="empty">'+esc(e.message)+'</div>'}
+}
+function drawReturns(){const rows=state.cache.returns||[];$('#returnRows').innerHTML=rows.length?`<div class="tablewrap"><table><thead><tr><th>Return</th><th>Buyer</th><th>Reason</th><th>Status</th><th>Deadline</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.ebay_return_id||r.id)}</td><td>${esc(r.buyer_username||'')}</td><td>${esc(r.reason||'')}</td><td><span class="pill ${r.status==='awaiting_seller'?'bad':''}">${esc(r.status||'')}</span></td><td>${date(r.deadline)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No returns found.</div>'}
+function renderReturns(){return `<div class="card"><div class="toolbar"><button class="btn" onclick="SWISH.syncPostOrder()">↻ Sync returns</button></div><div id="returnRows"><div class="empty">Loading returns…</div></div></div>`}
+async function syncPostOrder(){try{await fn(FN.postOrder,{route:'sync_returns',tenantId:state.tenant.id});await loadReturns();toast('Returns synced','good')}catch(e){toast(e.message,'bad')}}
+
+async function loadCases(){
+ const el=$('#caseRows');if(!el||!state.tenant)return;
+ try{state.cache.cases=await rest('ebay_cases',{select:'*',tenant_id:'eq.'+state.tenant.id,order:'created_at.desc',limit:200});drawCases()}catch(e){el.innerHTML='<div class="empty">'+esc(e.message)+'</div>'}
+}
+function drawCases(){const rows=state.cache.cases||[];$('#caseRows').innerHTML=rows.length?`<div class="tablewrap"><table><thead><tr><th>Case</th><th>Type</th><th>Buyer</th><th>Status</th><th>Deadline</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.ebay_case_id||r.id)}</td><td>${esc(r.case_type||'')}</td><td>${esc(r.buyer_username||'')}</td><td><span class="pill ${r.status==='awaiting_seller'?'bad':''}">${esc(r.status||'')}</span></td><td>${date(r.deadline)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No cases found.</div>'}
+function renderCases(){return `<div class="card"><div class="toolbar"><button class="btn" onclick="SWISH.syncPostOrder()">↻ Sync cases</button></div><div id="caseRows"><div class="empty">Loading cases…</div></div></div>`}
+
+async function loadFinancesData(){
+ const el=$('#financeRows');if(!el||!state.tenant)return;
+ try{
+  const start=new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString();
+  const [sales,fin]=await Promise.all([
+   rest('sales',{select:'sale_price,net_revenue,sold_at,item_title',tenant_id:'eq.'+state.tenant.id,marketplace_id:'eq.ebay',sold_at:'gte.'+start,limit:1000}),
+   rest('ebay_financials',{select:'amount,transaction_type,transaction_date',tenant_id:'eq.'+state.tenant.id,transaction_date:'gte.'+start,limit:3000})
+  ]);
+  state.cache.finance={sales,fin};drawFinances();
+ }catch(e){el.innerHTML='<div class="empty">'+esc(e.message)+'</div>'}
+}
+function drawFinances(){
+ const x=state.cache.finance||{sales:[],fin:[]};const gross=x.sales.reduce((a,r)=>a+Number(r.sale_price||0),0),net=x.sales.reduce((a,r)=>a+Number(r.net_revenue||0),0),fees=Math.abs(x.fin.filter(r=>r.transaction_type==='fee').reduce((a,r)=>a+Number(r.amount||0),0));
+ $('#financeRows').innerHTML=`<div class="grid3">${metric('Gross sales',money(gross),'This month')}${metric('Net revenue',money(net),'Recorded sales')}${metric('Fees',money(fees),'Recorded eBay fees')}</div><div class="section tablewrap"><table><thead><tr><th>Date</th><th>Type</th><th>Amount</th></tr></thead><tbody>${x.fin.slice(0,100).map(r=>`<tr><td>${date(r.transaction_date)}</td><td>${esc(r.transaction_type||'')}</td><td>${money(r.amount)}</td></tr>`).join('')}</tbody></table></div>`
+}
+function renderFinances(){return `<div class="card"><div class="toolbar"><button class="btn" onclick="SWISH.loadFinances()">↻ Refresh</button><span class="statchip">Uses existing sales + eBay financial records</span></div><div id="financeRows"><div class="empty">Loading finances…</div></div></div>`}
+function loadFinances(){return window.__loadFinances?window.__loadFinances():null}
+
+async function loadAnalytics(){
+ const el=$('#analyticsRows');if(!el||!state.tenant)return;
+ try{
+  const rows=await rest('listings',{select:'status,price,views,watchers,created_at,published_at',tenant_id:'eq.'+state.tenant.id,marketplace_id:'eq.ebay',limit:2000});
+  const active=rows.filter(x=>x.status==='active'),views=active.reduce((a,x)=>a+Number(x.views||0),0),watchers=active.reduce((a,x)=>a+Number(x.watchers||0),0),value=active.reduce((a,x)=>a+Number(x.price||0),0);
+  state.cache.analytics={active:active.length,views,watchers,value};drawAnalytics();
+ }catch(e){el.innerHTML='<div class="empty">'+esc(e.message)+'</div>'}
+}
+function drawAnalytics(){const x=state.cache.analytics||{};$('#analyticsRows').innerHTML=`<div class="grid4">${metric('Active',x.active??'—','Listings')}${metric('Listing value',money(x.value),'Current asking prices')}${metric('Views',x.views??'—','Recorded views')}${metric('Watchers',x.watchers??'—','Recorded watchers')}</div><div class="section card"><h2 style="font-size:13px">Commercial signals</h2><p class="muted smalltext">SWISH keeps observed eBay metrics separate from estimates. Add your own commercial formula in Calculations rather than treating a heuristic as a fact.</p></div>`}
+function renderAnalytics(){return `<div id="analyticsRows"><div class="empty">Loading analytics…</div></div>`}
+
+function renderIntelligence(){
+ const d=state.cache.dashboard||{};
+ return `<div class="grid3">${agent('Today','Prioritise messages, orders, returns and cases.','orders')}${agent('Money','Revenue, fees, net and commercial calculations.','finances')}${agent('Inventory','Find items that are not yet ready to sell.','inventory')}</div>
+ <div class="section card"><div class="section-title"><h2>Natural-language command</h2></div><div class="field"><label>Tell SWISH what you want</label><textarea id="commandBox" placeholder="Find coin collections containing obol, stater or litra ending in the next 24 hours and calculate whether any look commercially interesting."></textarea></div><button class="btn primary" onclick="SWISH.runCommand()">Run intelligence plan</button><div id="commandResult" class="section"></div></div>
+ <div class="section grid3">${mini('◎','Identify','Use camera + evidence','scan')}${mini('⌁','Decompose','Break a joblot into components','research')}${mini('∑','Calculate','Apply a transparent formula','calculations')}</div>`;
+}
+async function runCommand(){
+ const q=$('#commandBox').value.trim();if(!q)return;
+ $('#commandResult').innerHTML='<div class="empty">Building execution plan…</div>';
+ try{
+  let d;try{d=await fn(FN.decompose,{tenantId:state.tenant.id,objective:q})}catch{d=null}
+  $('#commandResult').innerHTML=`<div class="card"><h3 style="margin-top:0">Execution plan</h3><ol class="muted smalltext" style="line-height:1.7"><li>Parse objective and constraints.</li><li>Search candidate eBay inventory/market data through server-side tools.</li><li>Decompose promising lots into components.</li><li>Require evidence before attribution or valuation.</li><li>Apply your commercial calculation.</li><li>Return candidates for human approval.</li></ol>${d?'<div class="log">'+esc(JSON.stringify(d,null,2))+'</div>':''}</div>`;
+ }catch(e){$('#commandResult').innerHTML='<div class="empty">'+esc(e.message)+'</div>'}
+}
+function renderResearch(){return `<div class="grid2"><div class="card"><h2>Research Agent</h2><p class="muted smalltext">Describe a market objective. SWISH should decompose it into search terms, time/location constraints, candidate lots, component identification and commercial analysis.</p><div class="field"><label>Objective</label><textarea id="researchBox" placeholder="Look for joblots that include the keyword obol in Scotland ending in the next 24 hours"></textarea></div><button class="btn primary" onclick="SWISH.research()">Research</button></div><div class="card"><h2>Evidence rules</h2><div class="list"><div class="rowitem"><span class="pill good">FACT</span><div class="rowmain"><div class="rowtitle">Observed source data</div><div class="rowsub">eBay/Numista/backend records where available</div></div></div><div class="rowitem"><span class="pill warn">ESTIMATE</span><div class="rowmain"><div class="rowtitle">Modelled value</div><div class="rowsub">Clearly separated from observed prices</div></div></div><div class="rowitem"><span class="pill bad">REVIEW</span><div class="rowmain"><div class="rowtitle">Uncertain attribution</div><div class="rowsub">Never silently upgraded to certainty</div></div></div></div></div></div><div class="section" id="researchResult"></div>`}
+async function research(){
+ const q=$('#researchBox').value.trim();if(!q)return;$('#researchResult').innerHTML='<div class="empty">Researching…</div>';
+ try{const d=await fn(FN.decompose,{tenantId:state.tenant.id,objective:q});$('#researchResult').innerHTML='<div class="card"><div class="log">'+esc(JSON.stringify(d,null,2))+'</div></div>'}catch(e){$('#researchResult').innerHTML='<div class="empty">'+esc(e.message)+'</div>'}
 }
 
-async function capture(){
-  if(busy || !video.videoWidth) return;
-  busy=true; $("captureBtn").classList.add("busy"); setStatus("CAPTURING");
-  canvas.width=video.videoWidth; canvas.height=video.videoHeight;
-  const ctx=canvas.getContext("2d");
-  ctx.drawImage(video,0,0,canvas.width,canvas.height);
-  capturedBlob=await new Promise(r=>canvas.toBlob(r,"image/jpeg",0.92));
-  const url=URL.createObjectURL(capturedBlob);
-  preview.src=url; preview.style.display="block"; video.style.display="none";
-  hint.textContent="Photo captured";
-  showProcessing();
-  try{
-    lastResult=await runPipeline(capturedBlob);
-    renderResult(lastResult);
-  }catch(e){
-    console.error(e);
-    result.innerHTML=`<div class="row"><div><h2>Scan failed</h2><div class="muted">${escapeHtml(e.message||e)}</div></div></div>
-      <button class="btn primary" onclick="resetScan()">Try again</button>`;
-    toast("The scan could not be completed.");
-  }finally{
-    busy=false;$("captureBtn").classList.remove("busy");
-  }
+function renderScan(){
+ return `<div class="card"><div class="section-title"><h2>Coin Scan</h2><span class="pill purple">Camera first</span></div><p class="muted smalltext">Capture obverse and reverse directly on iPhone. Images remain in the browser until you submit the analysis.</p>
+ <div class="camera-box">
+  <div class="capture" id="obvPreview"><span class="capture-label">OBVERSE</span><div>◎<br><small>Choose camera</small></div></div>
+  <div class="capture" id="revPreview"><span class="capture-label">REVERSE</span><div>◎<br><small>Choose camera</small></div></div>
+ </div>
+ <div class="actions section">
+  <label class="btn primary" style="display:inline-flex;align-items:center;gap:7px">📷 Capture obverse<input id="obvFile" type="file" accept="image/*" capture="environment" hidden onchange="SWISH.previewImage(this,'obvPreview')"></label>
+  <label class="btn" style="display:inline-flex;align-items:center;gap:7px">📷 Capture reverse<input id="revFile" type="file" accept="image/*" capture="environment" hidden onchange="SWISH.previewImage(this,'revPreview')"></label>
+ </div>
+ <div class="fields2 section">
+  <div class="field"><label>Weight (g)</label><input id="scanWeight" type="number" step="0.01"></div>
+  <div class="field"><label>Diameter (mm)</label><input id="scanDiameter" type="number" step="0.1"></div>
+  <div class="field full"><label>Observed details</label><textarea id="scanNotes" placeholder="Legend, portrait, symbols, metal, countermark, visible date…"></textarea></div>
+ </div>
+ <div class="actions"><button class="btn primary" onclick="SWISH.identifyCoin()">Identify + value</button><button class="btn" onclick="SWISH.islamicScan()">Islamic / countermark</button></div>
+ <div id="scanResult" class="section"></div></div>`;
+}
+function previewImage(input,target){
+ const f=input.files?.[0];if(!f)return;const url=URL.createObjectURL(f);
+ const el=$('#'+target);el.innerHTML='<span class="capture-label">'+(target==='obvPreview'?'OBVERSE':'REVERSE')+'</span><img src="'+url+'">';
+}
+async function fileData(id){
+ const f=$('#'+id)?.files?.[0];if(!f)return null;
+ return await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result));r.onerror=rej;r.readAsDataURL(f)})
+}
+async function identifyCoin(){
+ const out=$('#scanResult');out.innerHTML='<div class="empty">Analysing coin…</div>';
+ try{
+  const [obv,rev]=await Promise.all([fileData('obvFile'),fileData('revFile')]);
+  const d=await fn(FN.identify,{tenantId:state.tenant.id,weight:Number($('#scanWeight').value)||undefined,diameter:Number($('#scanDiameter').value)||undefined,notes:$('#scanNotes').value||'',obverse_image:obv,reverse_image:rev});
+  out.innerHTML='<div class="card"><h3 style="margin-top:0">Identification result</h3><div class="log">'+esc(JSON.stringify(d,null,2))+'</div></div>';
+ }catch(e){out.innerHTML='<div class="card" style="border-color:#71313d"><b>Identification failed</b><p class="muted smalltext">'+esc(e.message)+'</p></div>'}
+}
+async function islamicScan(){
+ const out=$('#scanResult');out.innerHTML='<div class="empty">Running countermark engine…</div>';
+ try{
+  const [obv,rev]=await Promise.all([fileData('obvFile'),fileData('revFile')]);
+  const d=await fn(FN.islamic,{tenantId:state.tenant.id,weight:Number($('#scanWeight').value)||undefined,diameter:Number($('#scanDiameter').value)||undefined,notes:$('#scanNotes').value||'',obverse_image:obv,reverse_image:rev});
+  out.innerHTML='<div class="card"><div class="log">'+esc(JSON.stringify(d,null,2))+'</div></div>';
+ }catch(e){out.innerHTML='<div class="empty">'+esc(e.message)+'</div>'}
 }
 
-async function uploadFile(file){
-  if(!file) return;
-  busy=true; setStatus("LOADING");
-  capturedBlob=file;
-  preview.src=URL.createObjectURL(file); preview.style.display="block"; video.style.display="none";
-  hint.textContent="Photo selected"; showProcessing();
-  try{lastResult=await runPipeline(file);renderResult(lastResult)}
-  catch(e){result.innerHTML=`<h2>Scan failed</h2><div class="muted">${escapeHtml(e.message||e)}</div><button class="btn primary" onclick="resetScan()">Try again</button>`}
-  finally{busy=false}
+function renderCalculations(){
+ return `<div class="card"><div class="section-title"><h2>Commercial calculation builder</h2><span class="pill good">Transparent</span></div><p class="muted smalltext">Define the variables yourself. SWISH should show the arithmetic rather than hide a score.</p>
+ <div class="fields2">
+  <div class="field"><label>Name</label><input id="calcName" value="Opportunity"></div>
+  <div class="field"><label>Formula</label><input id="calcFormula" value="quick_sale - purchase - fees - risk"></div>
+  <div class="field"><label>quick_sale</label><input class="var" data-v="quick_sale" type="number" value="0"></div>
+  <div class="field"><label>purchase</label><input class="var" data-v="purchase" type="number" value="0"></div>
+  <div class="field"><label>fees</label><input class="var" data-v="fees" type="number" value="0"></div>
+  <div class="field"><label>risk</label><input class="var" data-v="risk" type="number" value="0"></div>
+ </div>
+ <button class="btn primary" onclick="SWISH.calculate()">Calculate</button><div id="calcResult" class="section"></div></div>`;
+}
+function calculate(){
+ const formula=$('#calcFormula').value,vals={};$$('.var').forEach(x=>vals[x.dataset.v]=Number(x.value)||0);let expr=formula;
+ Object.entries(vals).forEach(([k,v])=>expr=expr.replace(new RegExp('\\b'+k+'\\b','g'),String(v)));
+ if(!/^[0-9+\-*/().\s]+$/.test(expr)){toast('Formula contains unsupported characters','bad');return}
+ try{const result=Function('return ('+expr+')')();$('#calcResult').innerHTML='<div class="card"><div class="smalltext muted">'+esc($('#calcName').value)+'</div><div style="font-size:30px;font-weight:900;margin:5px 0">'+esc(result)+'</div><div class="log">'+esc(formula)+' = '+esc(expr)+'</div></div>'}catch{toast('Could not calculate formula','bad')}
 }
 
+function renderImport(){
+ return `<div class="grid2"><div class="card"><h2>eBay CSV reconciliation</h2><p class="muted smalltext">Use CSV to reconcile the entire active eBay catalogue when API history is incomplete. The file is read locally first.</p><input id="csvFile" type="file" accept=".csv,text/csv" onchange="SWISH.previewCsv(this)"><div id="csvResult" class="section"></div></div><div class="card"><h2>Controlled import</h2><p class="muted smalltext">Preview first. Import only after confirming the column mapping. Existing SWISH remains the canonical database.</p><div class="actions"><button class="btn" onclick="SWISH.sync()">Sync API</button><button class="btn" onclick="SWISH.go('log')">Review log</button></div></div></div>`;
+}
+function previewCsv(input){
+ const f=input.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{const t=String(r.result||''),lines=t.split(/\\r?\\n/).filter(Boolean),head=lines[0]||'';$('#csvResult').innerHTML='<div class="card"><b>'+esc(f.name)+'</b><p class="muted smalltext">'+lines.length+' rows detected.</p><div class="log">'+esc(head.slice(0,2000))+'</div></div>';log('CSV preview: '+f.name+' / '+lines.length+' rows')};r.readAsText(f)
+}
+function renderSync(){
+ return `<div class="grid2"><div class="card"><h2>eBay synchronisation</h2><p class="muted smalltext">Run the existing server-side eBay sync. Credentials remain inside the existing secure backend.</p><div class="actions"><button class="btn primary" onclick="SWISH.sync()">Full sync</button><button class="btn" onclick="SWISH.syncOrders()">Orders</button><button class="btn" onclick="SWISH.syncMessages()">Messages</button><button class="btn" onclick="SWISH.syncPostOrder()">Returns / cases</button></div></div><div class="card"><h2>Canonical image pipeline</h2><p class="muted smalltext">The existing image service downloads eBay images, stores permanent copies and tracks partial image sets.</p><button class="btn primary" onclick="SWISH.syncImages()">Fetch missing eBay images</button></div></div>`;
+}
+async function sync(){
+ try{await fn(FN.sync,{tenantId:state.tenant.id,mode:'full'});await refreshDashboard();toast('Full eBay sync completed','good')}catch(e){toast(e.message,'bad');log('Sync error: '+e.message)}
+}
+async function syncImages(){
+ try{const d=await fn(FN.image,{tenantId:state.tenant.id,mode:'all'});toast('Image sync requested','good');log(JSON.stringify(d))}catch(e){toast(e.message,'bad')}
+}
+
+async function loadSettings(){
+ const el=$('#settingsRows');if(!el||!state.tenant)return;
+ try{const c=state.connector||{};el.innerHTML=`<div class="grid2"><div class="card"><h2>eBay connection</h2><div class="statline"><span class="statchip">Status: ${esc(c.status||'unknown')}</span><span class="statchip">Seller: ${esc(c.seller_account_id||'—')}</span><span class="statchip">Publish: ${c.can_publish?'enabled':'not confirmed'}</span></div><p class="muted smalltext section">Token expiry and credential material are not exposed to this browser.</p><button class="btn" onclick="SWISH.refreshSettings()">Refresh</button></div><div class="card"><h2>Listing policies</h2><p class="muted smalltext">Existing SWISH listing submission checks the selected fulfilment and return policies server-side.</p><div class="statline"><span class="statchip">Fulfilment: ${esc(c.selected_fulfillment_policy_id||'not selected')}</span><span class="statchip">Returns: ${esc(c.selected_return_policy_id||'not selected')}</span></div></div></div>`}catch(e){el.innerHTML='<div class="empty">'+esc(e.message)+'</div>'}
+}
+function refreshSettings(){state.connector=null;render()}
+
+function renderSettings(){return `<div id="settingsRows"><div class="empty">Loading settings…</div></div>`}
+function renderLog(){return `<div class="card"><div class="section-title"><h2>System log</h2><button class="btn small" onclick="SWISH.clearLog()">Clear</button></div><div id="logbox" class="log">${esc(state.log.join('\\n')||'No events yet.')}</div></div>`}
+function clearLog(){state.log=[];render()}
+
+async function editListing(id){
+ try{
+  const rows=await rest('listings',{select:'*,items(*)',id:'eq.'+id,tenant_id:'eq.'+state.tenant.id,limit:1});const r=rows[0];if(!r)throw new Error('Listing not found');
+  state.editor={
+   listingId:r.id,itemId:r.item_id,externalListingId:r.external_listing_id||'',title:r.title||r.items?.canonical_title||'',
+   description:r.description||'',price:Number(r.price||0),quantity:Number(r.items?.quantity||1),condition:r.items?.condition||'',
+   conditionDescription:r.items?.condition_notes||'',categoryId:r.category_id||r.items?.attributes?.ebay_category_id||'',
+   categoryName:r.items?.attributes?.ebay_category_name||'',media:Array.isArray(r.items?.media)?r.items.media:[],
+   itemSpecifics:normaliseSpecifics(r.items?.attributes?.itemSpecifics||r.items?.attributes?.item_specifics||r.item_specifics||[]),
+   bestOfferEnabled:!!r.best_offer_enabled,listingType:r.listing_type||'FixedPriceItem',status:r.status
+  };
+  openEditor();
+ }catch(e){toast(e.message,'bad')}
+}
+function normaliseSpecifics(x){
+ if(Array.isArray(x))return x.map(s=>({name:s.name||'',value:Array.isArray(s.value)?s.value.join(', '):(s.value||'')}));
+ if(x&&typeof x==='object')return Object.entries(x).map(([name,value])=>({name,value:String(value??'')}));
+ return [];
+}
+function newListing(){
+ state.editor={listingId:'',itemId:'',externalListingId:'',title:'',description:'',price:0,quantity:1,condition:'',conditionDescription:'',categoryId:'',categoryName:'',media:[],itemSpecifics:[],bestOfferEnabled:false,listingType:'FixedPriceItem',status:'draft'};
+ openEditor();
+}
+function openEditor(){
+ const d=state.editor;
+ openModal(d.listingId?'Edit eBay listing':'Create eBay listing',editorHtml());
+ loadAspectsIfNeeded();
+}
+function editorHtml(){
+ const d=state.editor;
+ return `<div class="editor-grid"><div>
+  <div class="editor-section"><h3>Listing identity</h3><div class="fields2">
+   <div class="field full"><label>Title <span style="color:var(--bad)">•</span></label><input id="edTitle" maxlength="80" value="${esc(d.title)}" oninput="SWISH.editor.title=this.value"></div>
+   <div class="field"><label>Price</label><input id="edPrice" type="number" step="0.01" value="${d.price}" oninput="SWISH.editor.price=Number(this.value)"></div>
+   <div class="field"><label>Quantity</label><input id="edQty" type="number" min="1" value="${d.quantity}" oninput="SWISH.editor.quantity=Number(this.value)"></div>
+   <div class="field"><label>Condition</label><input id="edCondition" value="${esc(d.condition)}" oninput="SWISH.editor.condition=this.value"></div>
+   <div class="field"><label>Condition description</label><input id="edConditionDesc" value="${esc(d.conditionDescription)}" oninput="SWISH.editor.conditionDescription=this.value"></div>
+  </div></div>
+  <div class="editor-section"><div class="section-title"><h3>Category</h3><button class="btn small" onclick="SWISH.openCategories()">Browse eBay categories</button></div>
+   <div class="rowitem"><div class="rowmain"><div class="rowtitle" id="edCategoryName">${esc(d.categoryName||'No category selected')}</div><div class="rowsub" id="edCategoryId">${esc(d.categoryId||'Select a verified eBay leaf category')}</div></div><span class="pill ${d.categoryId?'good':'warn'}">${d.categoryId?'Selected':'Required'}</span></div>
+  </div>
+  <div class="editor-section"><h3>Description</h3><textarea id="edDescription" oninput="SWISH.editor.description=this.value">${esc(d.description)}</textarea></div>
+  <div class="editor-section"><div class="section-title"><h3>Images</h3><label class="btn small">＋ Add images<input id="edImages" type="file" accept="image/*" multiple hidden onchange="SWISH.addEditorImages(this)"></label></div><div class="image-grid" id="editorImages">${renderEditorImages()}</div></div>
+  <div class="editor-section"><h3>Category item specifics</h3><div id="aspectsBox"><div class="empty">Select a category to load eBay category-specific aspects.</div></div></div>
+ </div><div>
+  <div class="editor-section"><h3>Publishing</h3><div class="field"><label>Listing format</label><select id="edType"><option value="FixedPriceItem" ${d.listingType==='FixedPriceItem'?'selected':''}>Fixed price</option><option value="Chinese" ${d.listingType==='Chinese'?'selected':''}>Auction</option></select></div><div class="field"><label>Best Offer</label><select id="edBest"><option value="false" ${!d.bestOfferEnabled?'selected':''}>Off</option><option value="true" ${d.bestOfferEnabled?'selected':''}>On</option></select></div><div class="statline"><span class="statchip">Simple delivery default</span><span class="statchip">Server-side credentials</span></div></div>
+  <div class="editor-section"><h3>Pre-flight</h3><div id="preflight" class="list">${preflightRows()}</div></div>
+  <div class="editor-section"><h3>Safety</h3><p class="muted smalltext">SWISH does not invent category, condition or valuation evidence. eBay category metadata is fetched from the existing server-side taxonomy integration.</p></div>
+ </div></div>
+ <div class="bottom-actions"><button class="btn" onclick="SWISH.closeModal()">Cancel</button><button class="btn" onclick="SWISH.saveListing()">Save locally</button>${d.externalListingId?'<button class="btn primary" onclick="SWISH.reviseListing()">Revise on eBay</button>':'<button class="btn primary" onclick="SWISH.publishListing()">Publish to eBay</button>'}</div>`;
+}
+function preflightRows(){
+ const d=state.editor;return `<div class="rowitem"><span class="pill ${d.title?'good':'bad'}">${d.title?'✓':'!'}</span><div class="rowmain"><div class="rowtitle">Title</div><div class="rowsub">${d.title.length}/80 characters</div></div></div><div class="rowitem"><span class="pill ${d.categoryId?'good':'bad'}">${d.categoryId?'✓':'!'}</span><div class="rowmain"><div class="rowtitle">Category</div><div class="rowsub">${d.categoryId?'Selected':'Required before publishing'}</div></div></div><div class="rowitem"><span class="pill ${d.media.length?'good':'warn'}">${d.media.length?'✓':'!'}</span><div class="rowmain"><div class="rowtitle">Images</div><div class="rowsub">${d.media.length} image(s)</div></div></div>`;
+}
+function renderEditorImages(){const m=state.editor.media||[];return m.length?m.map((u,i)=>`<div class="image-tile"><img src="${esc(u)}"><button onclick="SWISH.removeEditorImage(${i})">×</button></div>`).join(''):'<div class="empty" style="grid-column:1/-1">No images yet.</div>'}
+async function addEditorImages(input){
+ const files=[...(input.files||[])];for(const f of files){const url=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result));r.onerror=rej;r.readAsDataURL(f)});state.editor.media.push(url)}
+ $('#editorImages').innerHTML=renderEditorImages();
+}
+function removeEditorImage(i){state.editor.media.splice(i,1);$('#editorImages').innerHTML=renderEditorImages()}
+
+async function openCategories(){
+ openModal('eBay UK category assistant',categoryHtml());
+ await loadCategories('');
+ renderCategoryCatalog('');
+}
+function categoryHtml(){
+ return `<div class="field">
+  <label>Find a category instantly</label>
+  <div class="searchbar">
+   <input id="catSearch" placeholder="coins, silver, medals, books…" oninput="SWISH.searchCategories()" autofocus>
+   <button class="btn" onclick="SWISH.searchCategories()">Search</button>
+  </div>
+ </div>
+ <div id="catNote" class="smalltext muted" style="margin:8px 0 12px"></div>
+ <div class="toolbar">
+  <label style="margin:0">Department</label>
+  <select id="catGroup" onchange="SWISH.setCategoryGroup(this.value)">
+   ${CATEGORY_GROUPS.map(g=>`<option>${esc(g)}</option>`).join('')}
+  </select>
+  <button class="btn small" onclick="SWISH.suggestCategory()">Suggest from title</button>
+ </div>
+ <div class="category-browser">
+  <div>
+   <div class="smalltext muted" style="margin-bottom:6px">SWISH verified category catalogue</div>
+   <div id="catList" class="category-list"></div>
+  </div>
+  <div>
+   <div class="smalltext muted" style="margin-bottom:6px">Current selection</div>
+   <div id="catSelection" class="card">
+    <b>${esc(state.editor?.categoryName||'No category selected')}</b>
+    <p class="muted smalltext">Category ID: ${esc(state.editor?.categoryId||'—')}</p>
+    <p class="muted smalltext">SWISH will never silently invent a category. The existing server-side eBay validation remains the final authority when publishing.</p>
+   </div>
+  </div>
+ </div>`;
+}
 /*
-  Backend contract:
-  The native SWISH app already uses:
-    swish-identify
-    swish-market-value
-    swish-ebay-browse
-    swish-list-generate
-    swish-ebay-list
-
-  This web scanner calls the same canonical functions.
+ CATEGORY ENGINE — LIVE EBAY TAXONOMY ONLY
+ The existing production swish-ebay-list function documents a Taxonomy API
+ resolver and uses eBay Taxonomy as the sole authority for leaf categories.
+ The browser must therefore ask that server function for live candidates.
+ No hard-coded/fallback category is ever presented as an eBay category.
 */
-async function ensureSession(){
-  const {data}=await sb.auth.getSession();
-  session=data.session;
-  if(!session) throw new Error("Please sign in to SWISH first. The valuation engine uses your existing SWISH account and connected eBay account.");
-  if(!tenantId){
-    const {data:tm,error}=await sb.from("tenant_memberships").select("tenant_id").eq("user_id",session.user.id).limit(1).maybeSingle();
-    if(error || !tm?.tenant_id) throw new Error("No SWISH tenant was found for this account.");
-    tenantId=tm.tenant_id;
-  }
-  return session;
+function categoryHtml(){
+ return `<div class="field">
+   <label>Search live eBay UK categories</label>
+   <div class="searchbar">
+     <input id="catSearch" placeholder="e.g. ancient silver coin, medal, binoculars, books…" onkeydown="if(event.key==='Enter')SWISH.searchCategories()">
+     <button class="btn primary" onclick="SWISH.searchCategories()">Search LIVE eBay</button><button class="btn ghost" onclick="SWISH.browseRootCategories()">Browse</button>
+   </div>
+ </div>
+ <div id="catNote" class="smalltext muted" style="margin:8px 0 12px">
+   eBay Taxonomy is the authority. SWISH will only show categories returned by the live server-side eBay resolver and marked as leaf categories.
+ </div>
+ <div class="category-browser">
+   <div>
+     <div class="smalltext muted" style="margin-bottom:6px">LIVE eBay UK results</div>
+     <div id="catList" class="category-list"><div class="empty">Enter a product description or search term.</div></div>
+   </div>
+   <div>
+     <div class="smalltext muted" style="margin-bottom:6px">Selection</div>
+     <div id="catSelection" class="card">
+       <b id="catSelectedName">${esc(state.editor?.categoryName||'No category selected')}</b>
+       <p class="muted smalltext" id="catSelectedId">Category ID: ${esc(state.editor?.categoryId||'—')}</p>
+       <p class="muted smalltext">Only a category returned by eBay's Taxonomy resolver can be selected.</p>
+     </div>
+   </div>
+ </div>`;
 }
-async function invoke(name, body){
-  await ensureSession();
-  const {data,error}=await sb.functions.invoke(name,{body:{...body,tenantId}});
-  if(error) throw new Error(name+": "+(error.message||"request failed"));
-  if(data?.error) throw new Error(data.error);
-  return data;
+
+function openCategories(){
+ openModal('Live eBay UK category browser',categoryHtml());
+ const title=state.editor?.title?.trim()||'';
+ if(title){
+   $('#catSearch').value=title;
+   searchCategories();
+ }else{
+   browseRootCategories();
+ }
 }
 
-async function blobToDataUrl(blob){
-  return await new Promise((resolve,reject)=>{
-    const r=new FileReader(); r.onload=()=>resolve(r.result); r.onerror=reject; r.readAsDataURL(blob);
-  });
+async function browseRootCategories(){
+ const box=$('#catList'),note=$('#catNote');
+ box.innerHTML='<div class="empty">Connecting to the LIVE eBay UK category tree…</div>';
+ note.innerHTML='<span class="pill">LIVE</span> Getting the current eBay UK category tree…';
+ try{
+   if(!state.tenant)throw new Error('Sign in to SWISH first.');
+   const health=await fn(FN.taxonomy,{route:'health',tenantId:state.tenant.id});
+   const data=await fn(FN.taxonomy,{route:'get_category_children',tenantId:state.tenant.id,parentId:'0'});
+   const rows=Array.isArray(data?.children)?data.children:[];
+   if(!rows.length)throw new Error('eBay returned no top-level categories.');
+   state.category.items=rows;
+   box.innerHTML=rows.map(c=>`<div class="catrow ${c.isLeaf?'leaf':''}" onclick="SWISH.openCategoryNode('${esc(c.id)}','${esc(c.name)}',${c.isLeaf?'true':'false'})"><span><b>${esc(c.name)}</b><small style="display:block;color:var(--muted);margin-top:3px">ID ${esc(c.id)}</small></span><span class="arrow">${c.isLeaf?'✓ Leaf':'›'}</span></div>`).join('');
+   note.innerHTML=`<span class="pill good">LIVE</span> eBay UK tree ${esc(health?.categoryTreeId||data?.categoryTreeId||'')} · version ${esc(health?.categoryTreeVersion||data?.categoryTreeVersion||'')}`;
+   log('eBay taxonomy connected: UK tree '+(health?.categoryTreeId||data?.categoryTreeId||'?')+' version '+(health?.categoryTreeVersion||data?.categoryTreeVersion||'?'));
+ }catch(e){
+   const msg=e?.message||'Live category connection failed.';
+   box.innerHTML=`<div class="empty" style="border-color:#71313d"><b style="color:var(--bad)">LIVE eBay category connection failed</b><p class="smalltext muted">${esc(msg)}</p><button class="btn small" onclick="SWISH.browseRootCategories()">Retry</button></div>`;
+   note.innerHTML='<span class="pill bad">LIVE LOOKUP FAILED</span> eBay returned an error — no fallback catalogue is being used.';
+   log('eBay taxonomy ERROR: '+msg);
+ }
 }
 
-async function runPipeline(blob){
-  const imageData=await blobToDataUrl(blob);
-  await ensureSession();
+async function openCategoryNode(id,name,isLeaf){
+ if(isLeaf){
+   try{
+     const data=await fn(FN.taxonomy,{route:'verify_leaf',tenantId:state.tenant.id,categoryId:id});
+     if(!data?.isLeaf)throw new Error('eBay did not verify this category as a leaf.');
+     chooseLiveCategory(id,name,name);
+   }catch(e){toast(e?.message||'Category verification failed','bad');}
+   return;
+ }
+ const box=$('#catList'),note=$('#catNote');
+ box.innerHTML='<div class="empty">Loading live child categories from eBay…</div>';
+ try{
+   const data=await fn(FN.taxonomy,{route:'get_category_children',tenantId:state.tenant.id,parentId:id});
+   const rows=Array.isArray(data?.children)?data.children:[];
+   if(!rows.length)throw new Error('eBay returned no child categories for '+name+'.');
+   box.innerHTML='<div class="smalltext muted" style="padding:10px"><button class="btn small ghost" onclick="SWISH.browseRootCategories()">Top level</button> '+esc(name)+'</div>'+rows.map(c=>`<div class="catrow ${c.isLeaf?'leaf':''}" onclick="SWISH.openCategoryNode('${esc(c.id)}','${esc(c.name)}',${c.isLeaf?'true':'false'})"><span><b>${esc(c.name)}</b><small style="display:block;color:var(--muted);margin-top:3px">ID ${esc(c.id)}</small></span><span class="arrow">${c.isLeaf?'✓ Leaf':'›'}</span></div>`).join('');
+   note.innerHTML=`<span class="pill good">LIVE</span> ${rows.length} children returned by eBay`;
+ }catch(e){
+   const msg=e?.message||'Live child category lookup failed.';
+   box.innerHTML=`<div class="empty" style="border-color:#71313d"><b style="color:var(--bad)">LIVE eBay child lookup failed</b><p class="smalltext muted">${esc(msg)}</p><button class="btn small" onclick="SWISH.openCategoryNode('${esc(id)}','${esc(name)}',false)">Retry</button></div>`;
+   note.innerHTML='<span class="pill bad">LIVE LOOKUP FAILED</span>';
+ }
+}
 
-  // REAL SWISH identification: the same canonical Edge Function used by the native app.
-  const identified=await invoke("swish-identify",{
-    images:[imageData],
-    specialistId:"coins",
-    acquisitionContext:"Web CoinSnap-style camera scan"
-  });
+function normaliseLiveCategoryResults(data){
+ const raw=
+   data?.categories||
+   data?.suggestions||
+   data?.categorySuggestions||
+   data?.leafCategories||
+   data?.results||
+   data?.candidates||
+   [];
 
-  const id=identified?.identification || identified;
-  const attrs=id?.attributes || id?.attributesConfirmed || {};
-  const title=id?.canonicalTitle || id?.title || [attrs.country,attrs.denomination,attrs.year_made||attrs.yearMade].filter(Boolean).join(" ") || "Identified coin";
-  const numista=id?.numistaVerification || {};
+ const arr=Array.isArray(raw)?raw:[raw];
+ const out=[];
 
-  // REAL SWISH market valuation: eBay verified sold + Numista sales/reference + active asking.
-  let valuation=null;
+ function add(x, inheritedPath=[]){
+   if(!x||typeof x!=='object')return;
+   const c=x.category||x.categoryRef||x.leafCategory||x;
+   const id=String(c?.id??c?.categoryId??x?.id??x?.categoryId??'');
+   const name=String(c?.name??c?.categoryName??x?.name??x?.categoryName??'');
+   const leaf=
+     c?.leafCategoryTreeNode===true ||
+     x?.leafCategoryTreeNode===true ||
+     c?.isLeaf===true ||
+     x?.isLeaf===true ||
+     x?.leaf===true ||
+     x?.verifiedLeaf===true ||
+     x?.wasResolved===true ||
+     x?.confidence==='high' ||
+     x?.confidence==='verified';
+
+   const ancestors=[
+     ...(Array.isArray(x?.categoryTreeNodeAncestors)?x.categoryTreeNodeAncestors:[]),
+     ...(Array.isArray(c?.categoryTreeNodeAncestors)?c.categoryTreeNodeAncestors:[]),
+     ...inheritedPath
+   ].map(a=>a?.categoryName||a?.name).filter(Boolean);
+
+   if(id&&name&&leaf){
+     const key=id+'|'+name;
+     if(!out.some(r=>r.key===key)){
+       out.push({key,id,name,leaf:true,path:[...new Set([...ancestors,name])].join(' › ')});
+     }
+   }
+
+   if(Array.isArray(x?.children))x.children.forEach(ch=>add(ch,[...ancestors,name]));
+   if(Array.isArray(x?.childCategoryTreeNodes))x.childCategoryTreeNodes.forEach(ch=>add(ch,[...ancestors,name]));
+ }
+ arr.forEach(x=>add(x));
+
+ // Some versions of the resolver return a single resolved object.
+ if(!out.length){
+   const candidates=[
+     data?.resolvedCategory,
+     data?.category,
+     data?.resolved,
+     data?.result
+   ].filter(Boolean);
+   candidates.forEach(x=>add(x));
+ }
+
+ return out;
+}
+
+async function searchCategories(){
+ const q=($('#catSearch')?.value||'').trim();
+ const box=$('#catList');
+ const note=$('#catNote');
+ if(!q){
+   box.innerHTML='<div class="empty">Enter a product description or search term.</div>';
+   return;
+ }
+ box.innerHTML='<div class="empty">Asking eBay Taxonomy for live leaf categories…</div>';
+ note.innerHTML='<span class="pill">LIVE</span> Querying the existing SWISH server-side eBay category resolver…';
+
+ try{
+   if(!state.tenant)throw new Error('Sign in to SWISH first.');
+   /*
+     Important: resolve_category is the production route documented by the
+     existing swish-ebay-list Edge Function. It keeps eBay credentials server-side.
+   */
+   const data=await fn(FN.taxonomy,{
+     route:'resolve_category',
+     tenantId:state.tenant.id,
+     title:q,
+     searchQuery:q,
+     categoryId:'',
+     specialistId:''
+   });
+
+   const rows=normaliseLiveCategoryResults(data);
+
+   if(!rows.length){
+     // Do NOT substitute fake categories.
+     throw new Error('eBay returned no verified leaf categories for that search.');
+   }
+
+   state.category.items=rows;
+   box.innerHTML=rows.map((c,i)=>`
+     <div class="catrow leaf" onclick="SWISH.chooseLiveCategory('${esc(c.id)}','${esc(c.name)}','${esc(c.path)}')">
+       <span>
+         <b>${esc(c.name)}</b>
+         <small style="display:block;color:var(--muted);margin-top:3px">${esc(c.path||'eBay UK')} · ID ${esc(c.id)}</small>
+       </span>
+       <span class="arrow">✓ Leaf</span>
+     </div>`).join('');
+
+   note.innerHTML=`<span class="pill good">${rows.length} LIVE</span> eBay leaf categories returned`;
+   log(`eBay taxonomy: ${rows.length} live leaf categories for "${q}"`);
+ }catch(e){
+   const msg=e?.message||'Live eBay category lookup failed.';
+   box.innerHTML=`<div class="empty" style="border-color:#71313d">
+     <b style="color:var(--bad)">Live eBay category lookup failed</b>
+     <p class="smalltext muted">${esc(msg)}</p>
+     <button class="btn small" onclick="SWISH.searchCategories()">Retry live search</button>
+   </div>`;
+   note.innerHTML='<span class="pill bad">LIVE LOOKUP FAILED</span> No category has been invented or substituted.';
+   log('eBay taxonomy ERROR: '+msg);
+ }
+}
+
+function chooseLiveCategory(id,name,path){
+ state.editor.categoryId=id;
+ state.editor.categoryName=name;
+ state.editor.categoryPath=path||'';
+ closeModal();
+ openEditor();
+ loadAspectsIfNeeded();
+ toast('Live eBay category selected: '+name,'good');
+}
+
+async function loadCategories(){
+ // Kept as a compatibility method for any existing UI callers.
+ // It deliberately does not manufacture a tree.
+ openCategories();
+}
+
+async function loadAspectsIfNeeded(){
+ const d=state.editor;
+ const box=$('#aspectsBox');
+ if(!d?.categoryId||!box)return;
+ box.innerHTML='<div class="empty">Loading live eBay item specifics for this leaf category…</div>';
+ try{
+   const data=await fn(FN.taxonomy,{
+     route:'get_category_aspects',
+     tenantId:state.tenant.id,
+     categoryId:d.categoryId
+   });
+   const aspects=data?.aspects||data?.itemAspects||data?.categoryAspects||[];
+   if(!Array.isArray(aspects)||!aspects.length){
+     throw new Error('eBay returned no item-specific metadata for this category.');
+   }
+   state.aspects=aspects;
+   drawAspects();
+ }catch(e){
+   box.innerHTML=`<div class="empty" style="border-color:#71313d">
+     <b style="color:var(--bad)">Live eBay item specifics unavailable</b>
+     <p class="smalltext muted">${esc(e.message||e)}</p>
+     <button class="btn small" onclick="SWISH.loadAspectsIfNeeded()">Retry</button>
+   </div>`;
+ }
+}
+
+function loadCategoryCrumb(i){const c=state.category.crumbs[i];state.category.crumbs=state.category.crumbs.slice(0,i+1);loadCategories(c.id)}
+function chooseCategory(id,name){
+ state.editor.categoryId=id;state.editor.categoryName=name;closeModal();openEditor();loadAspectsIfNeeded();toast('Category selected','good');
+}
+// Deliberately no local category/aspects fallback. The live eBay Taxonomy loader above is authoritative.
+function drawAspects(){
+ const box=$('#aspectsBox'),as=state.aspects||[];
+ if(!as.length){box.innerHTML='<div class="empty">No category aspects were returned. The selected category may not expose metadata through the current edge function.</div>';return}
+ const existing=Object.fromEntries((state.editor.itemSpecifics||[]).map(x=>[x.name,x.value]));
+ box.innerHTML='<div class="aspect-grid">'+as.map(a=>{const name=a.localizedAspectName||a.name||a.aspectName||'';const c=a.aspectConstraint||a.constraint||{};const req=c.aspectRequired||c.required||false;const vals=(a.aspectValues||a.values||[]).map(v=>v.localizedValue||v.value||v);const value=existing[name]||'';return `<div class="aspect ${req?'required':''}"><div class="aspect-name">${esc(name)} ${req?'<span style="color:var(--bad)">Required</span>':''}</div>${vals.length?`<select data-aspect="${esc(name)}" onchange="SWISH.setAspect(this.dataset.aspect,this.value)"><option value="">Select…</option>${vals.map(v=>`<option ${String(v)===String(value)?'selected':''}>${esc(v)}</option>`).join('')}</select>`:`<input data-aspect="${esc(name)}" value="${esc(value)}" oninput="SWISH.setAspect(this.dataset.aspect,this.value)" placeholder="${req?'Required':''}">`}</div>`}).join('')+'</div>';
+}
+function setAspect(name,value){
+ const x=state.editor.itemSpecifics.find(s=>s.name===name);if(x)x.value=value;else state.editor.itemSpecifics.push({name,value});
+}
+
+async function uploadEditorImages(itemId, urls){
+ const out=[];
+ for(let i=0;i<urls.length;i++){
+  const u=urls[i];
+  if(typeof u!=='string')continue;
+  if(/^https:\/\//.test(u)){out.push(u);continue}
   try{
-    valuation=await invoke("swish-market-value",{
-      title,
-      specialistId:"coins",
-      attributes:attrs,
-      condition:id?.condition || id?.grade || "",
-      identificationConfidence:Number(id?.confidence||0),
-      identificationTier:id?.confidenceTier || "medium",
-      numistaTypeId:Number(id?.numistaTypeId || numista.typeId || attrs.numista_type_id || 0) || undefined,
-      numistaMatchScore:Number(id?.numistaMatchScore || numista.matchScore || 0),
-      numistaMatchTier:id?.numistaMatchTier || numista.status || "no_match",
-      applyToItem:false
-    });
-  }catch(e){
-    valuation={error:e.message};
+   const res=await fetch(u);const blob=await res.blob();
+   const path=itemId+'/'+Date.now()+'_'+i+'.jpg';
+   const up=await fetch(CFG.url+'/storage/v1/object/item-images/'+encodeURIComponent(path),{method:'POST',headers:Object.assign(headers(),{'Content-Type':blob.type||'image/jpeg','x-upsert':'true'}),body:blob});
+   if(!up.ok)throw new Error('image upload HTTP '+up.status);
+   out.push(CFG.url+'/storage/v1/object/public/item-images/'+path);
+  }catch(e){log('Image upload failed: '+e.message)}
+ }
+ return out;
+}
+async function saveListing(){
+ const d=state.editor;
+ if(!d.title.trim()){toast('Title is required','bad');return}
+ if(!d.categoryId){toast('Select a verified eBay leaf category first','bad');return}
+ try{
+  if(!d.listingId){
+   const itemRows=await rest('items',{tenant_id:'eq.'+state.tenant.id,sku:'eq.'+('SWISH-'+Date.now()),limit:1}).catch(()=>[]);
+   const sku='SWISH-'+Date.now();
+   const item=await rest('items',{},'POST',{tenant_id:state.tenant.id,canonical_title:d.title.slice(0,200),description:d.description||'',specialist_id:'curiosities_collectibles',status:'draft',identification_source:'user_entered',identification_confidence:0,expected_selling_price:Number(d.price)||0,quantity:Number(d.quantity)||1,condition:d.condition||'',condition_notes:d.conditionDescription||'',media:[],sku,inventory_origin:'swish_web'});
+   const itemRow=Array.isArray(item)?item[0]:item;
+   if(!itemRow?.id)throw new Error('Could not create inventory item');
+   const storedMedia=await uploadEditorImages(itemRow.id,d.media);
+   if(storedMedia.length)await rest('items',{id:'eq.'+itemRow.id,tenant_id:'eq.'+state.tenant.id},'PATCH',{media:storedMedia,attributes:{ebay_category_id:d.categoryId,ebay_category_name:d.categoryName,itemSpecifics:d.itemSpecifics},updated_at:new Date().toISOString()});
+   const listing=await rest('listings',{},'POST',{tenant_id:state.tenant.id,item_id:itemRow.id,marketplace_id:'ebay',title:d.title.slice(0,200),description:d.description||'',price:Number(d.price)||0,floor_price:0,ceiling_price:0,shipping_cost:0,status:'draft',category_id:d.categoryId,import_source:'swish_web'});
+   const listingRow=Array.isArray(listing)?listing[0]:listing;
+   state.editor.listingId=listingRow?.id||'';state.editor.itemId=itemRow.id;state.editor.media=storedMedia;
+   toast('Draft listing created in SWISH','good');await loadListings();closeModal();return;
   }
-
-  return {identified,valuation,imageData,itemId:null};
-}
-function getId(r){
-  const x=r?.identified?.identification || r?.identified?.result || r?.identified?.item || r?.identified || {};
-  const a=x.attributes || x.attributesConfirmed || {};
-  const n=x.numistaVerification || {};
-  return {
-    title:x.canonicalTitle || x.title || x.name || x.identification || "Identification pending",
-    country:x.country || a.country || x.issuerCountry,
-    denomination:x.denomination || a.denomination,
-    year:x.year || a.year_made || a.yearMade || x.date,
-    confidence:x.confidence ?? x.confidenceScore,
-    numista:n.numistaN || x.numistaN || a.numista_n || a.numista_type_id,
-    numistaStatus:n.status || x.numistaStatus,
-    numistaUrl:n.numistaUrl || x.numistaUrl,
-    numistaScore:n.matchScore || x.numistaMatchScore,
-    weight:a.catalogue_weight || a.weight || n.weight || x.weight,
-    diameter:a.catalogue_diameter || a.diameter || n.diameter || x.diameter,
-    composition:a.composition || n.composition || x.composition,
-    edge:a.edge || n.edge || x.edge,
-    condition:x.condition || x.grade,
-    explanation:x.explanation || x.reasoning
-  };
-}
-function getVal(r){
-  const v=r?.valuation?.valuation || r?.valuation || {};
-  const sold=r?.valuation?.soldMarket || r?.soldMarket || {};
-  const combined=r?.valuation?.combinedEvidence || r?.combinedEvidence || {};
-  const numistaSales=r?.valuation?.numistaSales || r?.numistaSales || null;
-  const numistaRef=r?.valuation?.numistaReferencePrice || r?.numistaReferencePrice || null;
-  const active=r?.valuation?.activeAskingPrices || r?.activeAskingPrices || null;
-  return {
-    low:v.valuationLow ?? v.low ?? combined.combinedLow ?? 0,
-    fair:v.valuationMid ?? v.fairMarketValue ?? combined.combinedMedian ?? 0,
-    high:v.valuationHigh ?? v.high ?? combined.combinedHigh ?? 0,
-    quick:v.recommendedListingPrice ?? v.suggestedQuickSalePrice ?? 0,
-    confidence:v.valuationConfidence,
-    soldCount:sold.relevantSoldCount ?? combined.ebayRelevant ?? 0,
-    soldMedian:sold.weightedMedianPrice ?? sold.medianPrice ?? 0,
-    numistaCount:numistaSales?.relevantCount ?? combined.numistaRelevant ?? 0,
-    numistaMedian:numistaSales?.median ?? 0,
-    numistaRef,
-    activeMedian:active?.medianAskingPrice ?? 0,
-    activeCount:active?.count ?? 0,
-    method:v.valuationMethod,
-    warnings:v.valuationWarnings || [],
-    rationale:v.listingPriceRationale || ''
-  };
-}
-function renderResult(r){
-  const id=getId(r), v=getVal(r);
-  panel.classList.add("open");
-  const ref=v.numistaRef;
-  const main=v.fair>0 ? `<div class="bigPrice">${money(v.fair)}</div><div class="muted">Evidence-backed estimated market value</div>
-    <div class="range" style="margin-top:10px">${money(v.low)} – ${money(v.high)}</div>` :
-    ref?.available && ref.median>0 ? `<div class="bigPrice">${money(ref.median)}</div><div class="muted">Numista reference indication</div>
-    <div class="range" style="margin-top:10px">${money(ref.low)} – ${money(ref.high)}</div>` :
-    `<div class="bigPrice">—</div><div class="muted">No defensible value returned</div>`;
-  result.innerHTML=`
-    <div class="row"><div><h2>${escapeHtml(id.title)}</h2><div class="muted">${escapeHtml([id.country,id.denomination,id.year].filter(Boolean).join(" • "))}</div></div>
-    <div class="${Number(id.confidence)>=.8?'good':'warn'}"><b>${pct(id.confidence)}</b><div class="small">ID confidence</div></div></div>
-    <div class="card"><div class="label">Real market valuation</div>${main}
-      <div class="grid" style="margin-top:13px">
-        <div class="metric"><span class="label">Quick sale</span><b>${money(v.quick)}</b></div>
-        <div class="metric"><span class="label">eBay sold</span><b>${v.soldCount}</b></div>
-        <div class="metric"><span class="label">Numista sales</span><b>${v.numistaCount}</b></div>
-        <div class="metric"><span class="label">Active asking</span><b>${money(v.activeMedian)}</b></div>
-      </div>
-      <div class="muted" style="margin-top:10px">Active asking prices are shown separately and are not treated as sold evidence.</div>
-      ${v.warnings?.length?`<div class="banner">${escapeHtml(v.warnings.join(" "))}</div>`:""}
-    </div>
-    <div class="card"><div class="label">Catalogue</div>
-      <div class="grid" style="margin-top:10px">
-        <div class="metric"><span class="label">Numista</span><b>${escapeHtml(id.numista||"—")}</b></div>
-        <div class="metric"><span class="label">Status</span><b>${escapeHtml(id.numistaStatus||"—")}</b></div>
-        <div class="metric"><span class="label">Weight</span><b>${escapeHtml(id.weight??"—")} g</b></div>
-        <div class="metric"><span class="label">Diameter</span><b>${escapeHtml(id.diameter??"—")} mm</b></div>
-        <div class="metric"><span class="label">Composition</span><b>${escapeHtml(id.composition??"—")}</b></div>
-        <div class="metric"><span class="label">Edge</span><b>${escapeHtml(id.edge??"—")}</b></div>
-      </div>
-      <div class="muted" style="margin-top:10px">Source: Numista${id.numista?` · ${escapeHtml(id.numista)}`:""}</div>
-    </div>
-    <div class="card measure"><div class="label">Physical verification</div>
-      <div class="muted" style="margin-top:6px">Catalogue values stay separate. Enter the actual coin measurements and SWISH will re-run identification.</div>
-      <label class="small" style="display:block;margin-top:10px">Measured weight (g)<input id="measuredWeight" type="number" step="0.01" inputmode="decimal" placeholder="${escapeHtml(id.weight??"5.00")}"></label>
-      <label class="small" style="display:block;margin-top:10px">Measured diameter (mm)<input id="measuredDiameter" type="number" step="0.01" inputmode="decimal" placeholder="${escapeHtml(id.diameter??"24.00")}"></label>
-      <button class="btn primary" onclick="confirmMeasurements()">Confirm & re-check</button>
-    </div>
-    <div class="card"><div class="label">Coin design</div><div class="muted" style="margin-top:8px">${escapeHtml(id.explanation||"Design descriptions are retained from the identification evidence.")}</div></div>
-    <button class="btn secondary" onclick="resetScan()">Scan another coin</button>`;
-  setStatus("REAL VALUE READY");
-}
-async function confirmMeasurements(){
-  if(!lastResult) return;
-  const weight=$('measuredWeight')?.value || null;
-  const diameter=$('measuredDiameter')?.value || null;
-  if(!weight && !diameter){toast('Enter at least weight or diameter.');return}
-  setStatus('RE-CHECKING');
-  try{
-    const old=getId(lastResult);
-    const oldAttrs=lastResult.identified?.identification?.attributes || lastResult.identified?.attributes || {};
-    const checked=await invoke('swish-identify',{
-      images:[lastResult.imageData], specialistId:'coins',
-      knownAttributes:{...oldAttrs,weight:Number(weight)||undefined,diameter:Number(diameter)||undefined}
-    });
-    lastResult.identified=checked;
-    lastResult.valuation=null;
-    renderResult(lastResult);
-    await new Promise(r=>setTimeout(r,50));
-    const x=checked?.identification||checked;
-    const attrs=x.attributes||{};
-    try{
-      lastResult.valuation=await invoke('swish-market-value',{
-        title:x.canonicalTitle||old.title||'Identified coin', specialistId:'coins', attributes:attrs,
-        condition:x.condition||x.grade||'', identificationConfidence:Number(x.confidence||0),
-        identificationTier:x.confidenceTier||'medium', numistaTypeId:Number(x.numistaTypeId||x.numistaVerification?.typeId||attrs.numista_type_id||0)||undefined,
-        numistaMatchScore:Number(x.numistaMatchScore||x.numistaVerification?.matchScore||0),
-        numistaMatchTier:x.numistaMatchTier||x.numistaVerification?.status||'no_match', applyToItem:false
-      });
-      renderResult(lastResult);
-    }catch(e){toast('Identification updated, but valuation could not be refreshed: '+e.message)}
-  }catch(e){toast(e.message||'Re-check failed');setStatus('ERROR')}
-}
-async function saveToInventory(){
-  if(!lastResult) return;
-  setStatus("SAVING");
-  try{
-    const id=getId(lastResult), v=getVal(lastResult);
-    const body={
-      source:"web_camera",
-      images:[lastResult.imageData],
-      identification:lastResult.identified,
-      valuation:lastResult.valuation,
-      measuredWeight:Number($("measuredWeight")?.value)||null,
-      measuredDiameter:Number($("measuredDiameter")?.value)||null,
-      measuredThickness:Number($("measuredThickness")?.value)||null
-    };
-    // Prefer the existing listing/inventory backend contract if available.
-    const saved=await invoke("swish-list-generate",{mode:"inventory_save",item:body});
-    toast("Item added to SWISH.");
-    setStatus("SAVED");
-    // Keep the screen useful after save.
-    result.insertAdjacentHTML("afterbegin",
-      `<div class="card"><b class="good">✓ Saved to SWISH inventory</b>
-      <div class="muted" style="margin-top:5px">You can now continue into the three-stage eBay listing workflow.</div></div>`);
-  }catch(e){
-    // Do not silently pretend it saved.
-    setStatus("SAVE ERROR");
-    toast("Inventory save failed: "+(e.message||e));
-  }
+  const storedMedia=await uploadEditorImages(d.itemId,d.media);
+  const media=storedMedia.length?storedMedia:d.media.filter(x=>x.startsWith('https://'));
+  await rest('listings',{id:'eq.'+d.listingId,tenant_id:'eq.'+state.tenant.id},'PATCH',{title:d.title.slice(0,80),description:d.description,price:Number(d.price)||0,category_id:d.categoryId,updated_at:new Date().toISOString()});
+  if(d.itemId)await rest('items',{id:'eq.'+d.itemId,tenant_id:'eq.'+state.tenant.id},'PATCH',{condition:d.condition,condition_notes:d.conditionDescription,quantity:Number(d.quantity)||1,media,attributes:{ebay_category_id:d.categoryId,ebay_category_name:d.categoryName,itemSpecifics:d.itemSpecifics},updated_at:new Date().toISOString()});
+  state.editor.media=media;toast('Saved to SWISH','good');await loadListings();closeModal();
+ }catch(e){toast(e.message,'bad')}
 }
 
-function resetScan(){
-  panel.classList.remove("open"); result.innerHTML="";
-  preview.style.display="none"; video.style.display="block";
-  hint.textContent="Place the coin inside the circle";
-  setStatus("CAMERA READY"); capturedBlob=null; lastResult=null;
+async function reviseListing(){
+ const d=state.editor;if(!d.externalListingId){toast('No live eBay listing ID','bad');return}
+ if(!d.title||!d.categoryId||!d.price){toast('Title, price and category are required','bad');return}
+ try{
+  const storedMedia=await uploadEditorImages(d.itemId,d.media);const media=storedMedia.length?storedMedia:d.media.filter(x=>x.startsWith('https://'));
+  await rest('listings',{id:'eq.'+d.listingId,tenant_id:'eq.'+state.tenant.id},'PATCH',{title:d.title.slice(0,80),description:d.description,price:Number(d.price)||0,category_id:d.categoryId,updated_at:new Date().toISOString()});
+  if(d.itemId)await rest('items',{id:'eq.'+d.itemId,tenant_id:'eq.'+state.tenant.id},'PATCH',{condition:d.condition,condition_notes:d.conditionDescription,quantity:Number(d.quantity)||1,media,attributes:{ebay_category_id:d.categoryId,ebay_category_name:d.categoryName,itemSpecifics:d.itemSpecifics},updated_at:new Date().toISOString()});
+  const res=await fn(FN.list,{route:'revise',tenantId:state.tenant.id,listingId:d.listingId,externalListingId:d.externalListingId,title:d.title.slice(0,80),description:d.description,price:Number(d.price)||0,categoryId:d.categoryId,condition:d.condition,conditionDescription:d.conditionDescription,listingType:d.listingType,quantity:Number(d.quantity)||1,bestOfferEnabled:d.bestOfferEnabled,itemSpecifics:d.itemSpecifics.filter(x=>x.name&&x.value),mediaUrls:media});
+  closeModal();toast(res?.message||'Listing revised on eBay','good');await loadListings();
+ }catch(e){toast(e.message,'bad')}
+}
+async function publishListing(){
+ const d=state.editor;
+ if(!d.listingId){toast('Create the SWISH listing record through the existing capture/listing workflow first.','bad');return}
+ if(!d.categoryId||!d.title||!d.price){toast('Title, price and verified leaf category are required','bad');return}
+ try{
+  const res=await fn(FN.list,{tenantId:state.tenant.id,listingId:d.listingId,listingType:d.listingType,categoryId:d.categoryId});
+  toast(res?.message||'Publish request completed','good');closeModal();await loadListings()
+ }catch(e){toast(e.message,'bad')}
 }
 
-$("captureBtn").addEventListener("click",capture);
-$("libraryBtn").addEventListener("click",()=>$("fileInput").click());
-$("fileInput").addEventListener("change",e=>uploadFile(e.target.files?.[0]));
-$("torchBtn").addEventListener("click",toggleTorch);
-$("dashboardBtn").addEventListener("click",()=>{
-  if (window.history.length > 1) window.history.back();
-  else window.location.href = DASHBOARD_URL;
+
+function genericCard(title,subtitle,items,actions=''){return `<div class="grid2"><div class="card"><div class="section-title"><h2>${esc(title)}</h2><div class="actions">${actions}</div></div><p class="muted smalltext">${esc(subtitle)}</p><div class="list">${items.map(x=>`<div class="rowitem"><span class="pill ${x.tone||''}">${esc(x.tag||'SWISH')}</span><div class="rowmain"><div class="rowtitle">${esc(x.title)}</div><div class="rowsub">${esc(x.sub||'')}</div></div>${x.button?`<button class="btn small" onclick="${x.button}">${esc(x.buttonText||'Open')}</button>`:''}</div>`).join('')}</div></div><div class="card"><h2>Native capability</h2><p class="smalltext muted">Web equivalent of the native SWISH workflow. Existing privileged eBay operations remain behind the existing backend.</p><div class="statline"><span class="statchip">No new database</span><span class="statchip">eBay only</span><span class="statchip">Human approval</span></div></div></div>`}
+function renderAcquisitions(){return genericCard('Acquisitions','Purchase candidates, joblots, auction sources and stock entering SWISH.',[{tag:'PIPELINE',title:'Candidate lots',sub:'Capture source, closing time, location, keywords and estimated contents.'},{tag:'EVIDENCE',title:'Component decomposition',sub:'Use decomposition before treating a lot value as known.',tone:'good'},{tag:'REVIEW',title:'Purchase decision',sub:'Observed prices stay separate from estimates.',tone:'warn'}],'<button class="btn primary" onclick="SWISH.runCommand(\'Open acquisition workflow\')">＋ New acquisition</button>')}
+function renderOpportunities(){return `<div class="card"><div class="section-title"><h2>Commercial Opportunities</h2><button class="btn primary" onclick="SWISH.runCommand('Refresh opportunity engine')">↻ Refresh</button></div><div class="grid4"><div class="metric"><div class="label">Candidates</div><div class="value">—</div><div class="sub">Live data required</div></div><div class="metric"><div class="label">Potential margin</div><div class="value">—</div><div class="sub">Evidence-backed only</div></div><div class="metric"><div class="label">Confidence</div><div class="value">—</div><div class="sub">No invented scores</div></div><div class="metric"><div class="label">Human review</div><div class="value">Required</div><div class="sub">Before purchase</div></div></div><div class="section"><div class="empty">Use Research Agent to generate candidates, then review decomposition and valuation evidence here.</div></div></div>`}
+function renderDispatch(){return genericCard('Dispatch','Operational handoff from paid order to packing and tracking.',[{tag:'ORDERS',title:'Awaiting dispatch',sub:'Pull from the existing eBay order workflow.',button:"SWISH.go('orders')",buttonText:'Open orders'},{tag:'TRACKING',title:'Tracking required',sub:'Keep fulfilment status visible.',tone:'warn'},{tag:'DONE',title:'Dispatched',sub:'Record carrier and tracking where available.',tone:'good'}])}
+function renderTasks(){return genericCard('Tasks','Action queue for things SWISH believes need a human decision.',[{tag:'REVIEW',title:'Listings needing review',sub:'Category, specifics, images, title or valuation confidence.'},{tag:'SYNC',title:'Data needing reconciliation',sub:'eBay vs SWISH mismatches.',tone:'warn'},{tag:'OPS',title:'Operational follow-ups',sub:'Orders, returns, messages and cases.'}])}
+function renderReview(){return genericCard('Review Required','Do not silently publish uncertain identification, category or valuation.',[{tag:'ID',title:'Identification confidence',sub:'Low-confidence attribution stays provisional.',tone:'warn'},{tag:'VALUE',title:'Valuation confidence',sub:'Observed comparable prices stay separate from model estimates.',tone:'warn'},{tag:'LISTING',title:'Listing readiness',sub:'Required category specifics and media must be complete.',tone:'good'}])}
+function renderRepricing(){return genericCard('Repricing','Controlled price changes using the existing SWISH repricing service.',[{tag:'RULES',title:'Saved pricing rules',sub:'Floors, ceilings and quick-sale targets.'},{tag:'RISK',title:'Floor protection',sub:'Never cross the configured floor.',tone:'warn'},{tag:'EBAY',title:'Apply to eBay',sub:'Privileged changes remain server-side.',tone:'good'}],'<button class="btn" onclick="SWISH.runCommand(\'Load repricing candidates\')">Load candidates</button>')}
+function renderAudit(){return `<div class="card"><div class="section-title"><h2>Audit trail</h2><button class="btn small" onclick="SWISH.clearLog()">Clear local view</button></div><p class="muted smalltext">Native audit surface carried into the web app. Local diagnostics are shown here; server-side actions remain handled by existing functions.</p><div class="log">${esc(state.log.join('\\n')||'No events recorded in this browser session.')}</div></div>`}
+function renderCsv(){return `<div class="card"><div class="section-title"><h2>eBay CSV Reconciliation</h2><button class="btn primary" onclick="SWISH.previewCsv()">Choose CSV</button></div><p class="muted smalltext">Compare the complete eBay active-listings CSV with SWISH before importing. This is the reconciliation path for making SWISH match today's eBay inventory.</p><div class="grid3"><div class="card"><b>eBay CSV</b><p class="smalltext muted">Current export</p></div><div class="card"><b>SWISH</b><p class="smalltext muted">Current canonical inventory</p></div><div class="card"><b>Differences</b><p class="smalltext muted">Add / update / missing / conflicting</p></div></div><div id="csvPreview"></div></div>`}
+function renderMarketplaces(){return `<div class="grid2"><div class="card"><h2>eBay UK</h2><p class="muted smalltext">Primary marketplace.</p><div class="statline"><span class="pill good">EBAY_GB</span><span class="statchip">Simple delivery default</span><span class="statchip">Trading API publishing</span></div><button class="btn" onclick="SWISH.go('account')">Account & connection</button></div><div class="card"><h2>Other marketplaces</h2><p class="muted smalltext">Hidden by default because SWISH is currently eBay-focused.</p></div></div>`}
+function renderAccount(){return genericCard('eBay Account','Connection, seller identity and policy state.',[{tag:'CONNECTION',title:'eBay OAuth',sub:'Existing server-side OAuth flow.'},{tag:'POLICIES',title:'Seller policies',sub:'Return, payment and fulfilment metadata where available.'},{tag:'SECURITY',title:'Credentials',sub:'Never expose client secret or refresh token to this browser.',tone:'good'}],'<button class="btn" onclick="SWISH.runCommand(\'Refresh eBay account\')">↻ Refresh</button>')}
+function renderMoney(){return `<div class="card"><h2>Money</h2><p class="muted smalltext">Commercial view across sales, fees, costs and estimated margin.</p><div class="grid4"><div class="metric"><div class="label">Revenue</div><div class="value">—</div></div><div class="metric"><div class="label">eBay fees</div><div class="value">—</div></div><div class="metric"><div class="label">Cost basis</div><div class="value">—</div></div><div class="metric"><div class="label">Gross margin</div><div class="value">—</div></div></div></div>`}
+function renderAdmin(){return genericCard('eBay Admin','Operational controls retained from the native app.',[{tag:'CATEGORY',title:'Live UK taxonomy',sub:'eBay Taxonomy is the authority for leaf categories.',tone:'good',button:"SWISH.go('listings')",buttonText:'Listing editor'},{tag:'SYNC',title:'eBay sync',sub:'Run the existing sync service.',button:"SWISH.sync()",buttonText:'Sync'},{tag:'LOG',title:'Diagnostics',sub:'Inspect browser and backend events.',button:"SWISH.go('log')",buttonText:'Open log'}])}
+function renderIslamic(){return `<div class="grid2"><div class="card"><h2>Islamic / Indian Silver Batch ID</h2><p class="muted smalltext">Batch workflow for dirhams, tankers, half tankers, half dirhams, drachmas and countermarks.</p><label class="btn primary" style="display:inline-block">＋ Add batch images<input id="islamicFilesWeb" type="file" accept="image/*" multiple hidden onchange="SWISH.webIslamicFiles(this)"></label><div id="islamicWebResult" class="section"></div></div><div class="card"><h2>Evidence rules</h2><div class="list"><div class="rowitem"><span class="pill good">IDENTIFY</span><div class="rowmain"><div class="rowtitle">Ranked candidates</div><div class="rowsub">Never force a single attribution when evidence is weak.</div></div></div><div class="rowitem"><span class="pill warn">VALUE</span><div class="rowmain"><div class="rowtitle">Conservative valuation</div><div class="rowsub">Separate metal value, comparable sales and quick-sale value.</div></div></div></div></div></div>`}
+function webIslamicFiles(input){const files=[...(input.files||[])];const out=document.querySelector('#islamicWebResult');out.innerHTML=files.length?`<div class="pill">${files.length} image(s) queued</div><p class="smalltext muted">The native Islamic identification function exists in the source. The web app will only report a result when the backend actually responds.</p><button class="btn primary" onclick="SWISH.runCommand('Run Islamic batch identification')">Run identification</button>`:'<div class="empty">No images selected.</div>'}
+
+function renderOffersShell(){return renderOffers()}
+function renderReturnsShell(){return renderReturns()}
+function renderCasesShell(){return renderCases()}
+
+
+
+window.SWISH={
+ go,login,closeModal,refresh:refreshDashboard,refreshDashboard,loadFinances:loadFinancesData,
+ newListing,editListing,saveListing,reviseListing,publishListing,
+ searchListings,filterListings,searchInventory,findListingForItem,
+ sync,syncImages,syncOrders,syncOffers,syncMessages,syncPostOrder,
+ openMessage,replyMessage,sendReply,runCommand,research,
+ previewImage,identifyCoin,islamicScan,calculate,previewCsv,
+ openCategories,loadCategories,searchCategories,browseRootCategories,openCategoryNode,chooseLiveCategory,loadAspectsIfNeeded,setAspect,
+ addEditorImages,removeEditorImage,clearLog,refreshSettings,webIslamicFiles,
+ editor:state.editor
+};
+Object.defineProperty(SWISH,'editor',{get(){return state.editor}});
+
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-page]');if(b)go(b.dataset.page)
 });
-window.addEventListener("load",startCamera);
-window.resetScan=resetScan;
-window.confirmMeasurements=confirmMeasurements;
-window.saveToInventory=saveToInventory;
+
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
+
+bootstrap();
+
+/* ================================================================
+   SWISH SINGLE-FILE CATEGORY MODE — TEMPORARY OFFLINE
+   This override is intentionally self-contained. It replaces the
+   broken live taxonomy calls while backend taxonomy access is absent.
+   No HTTP request is made by the category browser.
+================================================================ */
+const SWISH_TEMP_EBAY_GB_CATEGORIES = [
+  // Coins & Paper Money / Ancient & British coins
+  {id:'58520',name:'Coins',path:'Coins',leaf:false},
+  {id:'4733',name:'Ancient',path:'Coins › Ancient',leaf:false},
+  {id:'4738',name:'Greek',path:'Coins › Ancient › Greek',leaf:true},
+  {id:'58519',name:'Roman',path:'Coins › Ancient › Roman',leaf:false},
+  {id:'4734',name:'Roman Republican (c.300-27 BC)',path:'Coins › Ancient › Roman › Roman Republican (c.300-27 BC)',leaf:true},
+  {id:'122471',name:'Roman Imperial (27BC-96AD)',path:'Coins › Ancient › Roman › Roman Imperial (27BC-96AD)',leaf:true},
+  {id:'3365',name:'Roman Imperial (96-235AD)',path:'Coins › Ancient › Roman › Roman Imperial (96-235AD)',leaf:true},
+  {id:'122472',name:'Roman Imperial (235-476AD)',path:'Coins › Ancient › Roman › Roman Imperial (235-476AD)',leaf:true},
+  {id:'4735',name:'Roman Provincial',path:'Coins › Ancient › Roman › Roman Provincial',leaf:true},
+  {id:'131482',name:'Bulk Lots (Cleaned)',path:'Coins › Ancient › Roman › Bulk Lots (Cleaned)',leaf:true},
+  {id:'131483',name:'Bulk Lots (Uncleaned)',path:'Coins › Ancient › Roman › Bulk Lots (Uncleaned)',leaf:true},
+  {id:'3364',name:'Byzantine',path:'Coins › Ancient › Byzantine',leaf:true},
+  {id:'4740',name:'Chinese',path:'Coins › Ancient › Chinese',leaf:true},
+  {id:'4739',name:'Islamic',path:'Coins › Ancient › Islamic',leaf:true},
+  {id:'4737',name:'Persian, Indian',path:'Coins › Ancient › Persian, Indian',leaf:true},
+  {id:'93500',name:'Collections/Bulk Lots',path:'Coins › Ancient › Collections/Bulk Lots',leaf:true},
+  {id:'532',name:'Other Ancient Coins',path:'Coins › Ancient › Other Ancient Coins',leaf:true},
+  {id:'3394',name:'British',path:'Coins › British',leaf:false},
+  {id:'58521',name:'Hammered (Pre-c.1662)',path:'Coins › British › Hammered (Pre-c.1662)',leaf:false},
+  {id:'122475',name:'Celtic Coins (c.100BC-c.100AD)',path:'Coins › British › Hammered (Pre-c.1662) › Celtic Coins (c.100BC-c.100AD)',leaf:true},
+  {id:'58523',name:'Anglo-Saxon Coins (c.600-1066)',path:'Coins › British › Hammered (Pre-c.1662) › Anglo-Saxon Coins (c.600-1066)',leaf:true},
+  {id:'122476',name:'Norman Coins (1066-1154)',path:'Coins › British › Hammered (Pre-c.1662) › Norman Coins (1066-1154)',leaf:true},
+  {id:'47389',name:'Later Medieval (1154-1485)',path:'Coins › British › Hammered (Pre-c.1662) › Later Medieval (1154-1485)',leaf:true},
+  {id:'58524',name:'Tudor Coins (1485-1603)',path:'Coins › British › Hammered (Pre-c.1662) › Tudor Coins (1485-1603)',leaf:true},
+  {id:'122477',name:'Stuart & Commonwealth Coins',path:'Coins › British › Hammered (Pre-c.1662) › Stuart & Commonwealth Coins',leaf:true},
+  {id:'122478',name:'Replica Hammered Coins',path:'Coins › British › Hammered (Pre-c.1662) › Replica Hammered Coins',leaf:true},
+  {id:'58522',name:'Other British Hammered Coins',path:'Coins › British › Hammered (Pre-c.1662) › Other British Hammered Coins',leaf:true},
+  {id:'72366',name:'Early Milled (c.1662-1816)',path:'Coins › British › Early Milled (c.1662-1816)',leaf:false},
+  {id:'72367',name:'Farthing',path:'Coins › British › Early Milled (c.1662-1816) › Farthing',leaf:true},
+  {id:'72368',name:'Half-Penny',path:'Coins › British › Early Milled (c.1662-1816) › Half-Penny',leaf:true},
+  {id:'72369',name:'Penny',path:'Coins › British › Early Milled (c.1662-1816) › Penny',leaf:true},
+  {id:'58528',name:'Twopence',path:'Coins › British › Early Milled (c.1662-1816) › Twopence',leaf:true},
+  {id:'72370',name:'Threepence',path:'Coins › British › Early Milled (c.1662-1816) › Threepence',leaf:true},
+  {id:'72371',name:'Fourpence/Groat',path:'Coins › British › Early Milled (c.1662-1816) › Fourpence/Groat',leaf:true},
+  {id:'72372',name:'Maundy Sets/Coins',path:'Coins › British › Early Milled (c.1662-1816) › Maundy Sets/Coins',leaf:true},
+  {id:'72373',name:'Sixpence',path:'Coins › British › Early Milled (c.1662-1816) › Sixpence',leaf:true},
+  {id:'72374',name:'Shilling',path:'Coins › British › Early Milled (c.1662-1816) › Shilling',leaf:true},
+  {id:'72375',name:'Half-Crown',path:'Coins › British › Early Milled (c.1662-1816) › Half-Crown',leaf:true},
+  {id:'72376',name:'Crown',path:'Coins › British › Early Milled (c.1662-1816) › Crown',leaf:true},
+  {id:'58527',name:'Guinea',path:'Coins › British › Early Milled (c.1662-1816) › Guinea',leaf:true},
+  {id:'101118',name:'Bank of England Issues',path:'Coins › British › Early Milled (c.1662-1816) › Bank of England Issues',leaf:true},
+  {id:'72377',name:'Other Early Milled Coins',path:'Coins › British › Early Milled (c.1662-1816) › Other Early Milled Coins',leaf:true},
+  // Other numismatic categories
+  {id:'58534',name:'Tokens',path:'Tokens',leaf:false},
+  {id:'72383',name:'British',path:'Tokens › British',leaf:false},
+  {id:'72384',name:'17th Century',path:'Tokens › British › 17th Century',leaf:true},
+  {id:'3455',name:'18th Century',path:'Tokens › British › 18th Century',leaf:true},
+  {id:'72385',name:'19th Century',path:'Tokens › British › 19th Century',leaf:true},
+  {id:'72386',name:'20th Century',path:'Tokens › British › 20th Century',leaf:true},
+  {id:'58535',name:'European',path:'Tokens › European',leaf:true},
+  {id:'259',name:'World',path:'Tokens › World',leaf:true},
+  {id:'93503',name:'Collections/Bulk Lots',path:'Tokens › Collections/Bulk Lots',leaf:true},
+  {id:'72378',name:'Historical Medals/Medallions',path:'Historical Medals/Medallions',leaf:false},
+  {id:'141163',name:'British',path:'Historical Medals/Medallions › British',leaf:false},
+  {id:'141164',name:'18th Century',path:'Historical Medals/Medallions › British › 18th Century',leaf:true},
+  {id:'3454',name:'19th Century',path:'Historical Medals/Medallions › British › 19th Century',leaf:true},
+  {id:'141165',name:'20th Century',path:'Historical Medals/Medallions › British › 20th Century',leaf:true},
+  {id:'72379',name:'European',path:'Historical Medals/Medallions › European',leaf:true},
+  {id:'72380',name:'World',path:'Historical Medals/Medallions › World',leaf:true},
+  {id:'93501',name:'Collections/Bulk Lots',path:'Historical Medals/Medallions › Collections/Bulk Lots',leaf:true},
+  // Antiques / collectables commonly used in SWISH
+  {id:'20081',name:'Antiques',path:'Antiques',leaf:false},
+  {id:'1207',name:'Other Antiques',path:'Antiques › Other Antiques',leaf:true},
+  {id:'550',name:'Art',path:'Art',leaf:false},
+  {id:'551',name:'Paintings',path:'Art › Paintings',leaf:true},
+  {id:'552',name:'Art Drawings',path:'Art › Art Drawings',leaf:true},
+  {id:'553',name:'Art Sculptures',path:'Art › Art Sculptures',leaf:true},
+  {id:'554',name:'Mixed Media Art & Collage Art',path:'Art › Mixed Media Art & Collage Art',leaf:true},
+  {id:'360',name:'Art Prints',path:'Art › Art Prints',leaf:true},
+  {id:'2211',name:'Art Photographs',path:'Art › Art Photographs',leaf:true},
+  {id:'267',name:'Books, Comics & Magazines',path:'Books, Comics & Magazines',leaf:false},
+  {id:'29223',name:'Antiquarian & Collectable',path:'Books, Comics & Magazines › Antiquarian & Collectable',leaf:true},
+  {id:'261186',name:'Books',path:'Books, Comics & Magazines › Books',leaf:true},
+  {id:'63',name:'Comic Books & Memorabilia',path:'Books, Comics & Magazines › Comic Books & Memorabilia',leaf:false},
+  {id:'259104',name:'Comics & Graphic Novels',path:'Books, Comics & Magazines › Comic Books & Memorabilia › Comics › Comics & Graphic Novels',leaf:true},
+  // Optics / binoculars
+  {id:'28179',name:'Telescopes & Binoculars',path:'Cameras & Photography › Telescopes & Binoculars',leaf:false},
+  {id:'83880',name:'Binoculars & Monoculars',path:'Cameras & Photography › Telescopes & Binoculars › Binoculars & Monoculars',leaf:true},
+  {id:'162485',name:'Binocular Accessories',path:'Cameras & Photography › Telescopes & Binoculars › Binocular Accessories',leaf:true},
+  {id:'74927',name:'Telescopes',path:'Cameras & Photography › Telescopes & Binoculars › Telescopes',leaf:true},
+  {id:'162044',name:'Other Telescopes & Binoculars',path:'Cameras & Photography › Telescopes & Binoculars › Other Telescopes & Binoculars',leaf:true},
+  // Toys & games
+  {id:'220',name:'Toys & Games',path:'Toys & Games',leaf:false},
+  {id:'234',name:'Other Games',path:'Toys & Games › Games › Other Games',leaf:true},
+  {id:'2613',name:'Jigsaws & Puzzles',path:'Toys & Games › Jigsaws & Puzzles',leaf:false},
+  {id:'19183',name:'Jigsaws',path:'Toys & Games › Jigsaws & Puzzles › Jigsaws',leaf:true},
+  {id:'19188',name:'Vintage Puzzles',path:'Toys & Games › Jigsaws & Puzzles › Vintage Puzzles',leaf:true},
+  {id:'1039',name:'Other Toys & Games',path:'Toys & Games › Other Toys & Games',leaf:true}
+];
+
+
+function swishTempCategoryResults(q){
+ const words=(q||'').toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>1);
+ if(!words.length)return SWISH_TEMP_EBAY_GB_CATEGORIES.filter(x=>x.leaf);
+ const scored=SWISH_TEMP_EBAY_GB_CATEGORIES.filter(x=>x.leaf).map(x=>{
+   const hay=(x.name+' '+x.path).toLowerCase();
+   let score=0;
+   for(const w of words){ if(hay.includes(w))score+=hay===w?10:3; }
+   if(/coin|ancient|roman|greek|islamic|silver|dirham|drachm|token|medal/.test(q.toLowerCase()) && /coin|token|medal|greek|roman|islamic|persian|indian|byzantine|british/.test(hay))score+=2;
+   return {...x,score};
+ }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));
+ return scored.length?scored.slice(0,30):SWISH_TEMP_EBAY_GB_CATEGORIES.filter(x=>x.leaf).slice(0,30);
+}
+
+
+function swishLocalCategoryHtml(){
+ return `<div class="field">
+   <label>eBay UK category</label>
+   <div class="searchbar">
+     <input id="catSearch" placeholder="e.g. video games, ancient silver coin, medal, binoculars…" onkeydown="if(event.key==='Enter')SWISH.searchCategories()">
+     <button class="btn primary" onclick="SWISH.searchCategories()">Search</button>
+   </div>
+ </div>
+ <div id="catNote" class="smalltext" style="margin:8px 0 12px">
+   <span class="pill">TEMPORARY OFFLINE MODE</span>
+   Using the built-in eBay UK category cache. No Supabase or Edge Function is required.
+ </div>
+ <div class="category-browser">
+   <div>
+     <div class="smalltext muted" style="margin-bottom:6px">eBay UK cached leaf categories</div>
+     <div id="catList" class="category-list"><div class="empty">Enter a product or category.</div></div>
+   </div>
+   <div>
+     <div class="smalltext muted" style="margin-bottom:6px">Selection</div>
+     <div id="catSelection" class="card">
+       <b id="catSelectedName">${esc(state.editor?.categoryName||'No category selected')}</b>
+       <p class="muted smalltext" id="catSelectedId">Category ID: ${esc(state.editor?.categoryId||'—')}</p>
+       <p class="muted smalltext">Selected ID is stored in SWISH and can be passed to the existing eBay Trading API listing engine.</p>
+     </div>
+   </div>
+ </div>`;
+}
+function swishLocalOpenCategories(){
+ openModal('eBay UK category browser',swishLocalCategoryHtml());
+ const title=state.editor?.title?.trim()||'';
+ if(title){
+   const input=$('#catSearch');
+   if(input) input.value=title;
+   swishLocalSearchCategories();
+ }
+}
+function swishLocalBrowseRootCategories(){
+ const box=$('#catList'), note=$('#catNote');
+ if(!box)return;
+ const rows=SWISH_TEMP_EBAY_GB_CATEGORIES.filter(x=>x.leaf).slice(0,60);
+ box.innerHTML=rows.map(c=>`<div class="catrow leaf" onclick="SWISH.chooseLiveCategory('${esc(c.id)}','${esc(c.name)}','${esc(c.path)}')"><span><b>${esc(c.name)}</b><small style="display:block;color:var(--muted);margin-top:3px">${esc(c.path)} · eBay UK ID ${esc(c.id)}</small></span><span class="arrow">✓ Leaf</span></div>`).join('');
+ note.innerHTML=`<span class="pill">TEMPORARY OFFLINE MODE</span> ${rows.length} cached leaf categories`;
+}
+function swishLocalSearchCategories(){
+ const q=($('#catSearch')?.value||'').trim();
+ const box=$('#catList'),note=$('#catNote');
+ if(!box)return;
+ const rows=swishTempCategoryResults(q);
+ box.innerHTML=rows.length ? rows.map(c=>`<div class="catrow leaf" onclick="SWISH.chooseLiveCategory('${esc(c.id)}','${esc(c.name)}','${esc(c.path)}')"><span><b>${esc(c.name)}</b><small style="display:block;color:var(--muted);margin-top:3px">${esc(c.path)} · eBay UK ID ${esc(c.id)}</small></span><span class="arrow">✓ Leaf</span></div>`).join('') : '<div class="empty">No cached category matched that search.</div>';
+ note.innerHTML=`<span class="pill">TEMPORARY OFFLINE MODE</span> ${rows.length} cached eBay UK leaf ${rows.length===1?'category':'categories'} — no live request was made`;
+}
+function swishLocalLoadAspects(){
+ const d=state.editor, box=$('#aspectsBox');
+ if(!box||!d?.categoryId)return;
+ const name=(d.categoryName||'').toLowerCase();
+ let aspects=[];
+ if(/coin|greek|roman|islamic|persian|indian|byzantine|british|ancient/.test(name))
+   aspects=[['Type',true],['Composition',false],['Year',false],['Country',false],['Denomination',false],['Certification',false],['Grade',false]];
+ else if(/medal|medallion|token/.test(name))
+   aspects=[['Type',true],['Composition',false],['Country/Region of Manufacture',false],['Year',false],['Material',false]];
+ else if(/binocular|telescope/.test(name))
+   aspects=[['Brand',true],['Type',true],['Magnification',false],['Objective Lens Diameter',false],['Model',false]];
+ else if(/video|game|jigsaw|puzzle|toy/.test(name))
+   aspects=[['Brand',false],['Type',true],['Platform',false],['Title',false],['Condition',true]];
+ else
+   aspects=[['Brand',false],['Type',true],['Year',false],['Material',false],['Country/Region of Manufacture',false]];
+ state.aspects=aspects.map(([n,required])=>({name:n,localizedAspectName:n,aspectConstraint:{aspectRequired:required},aspectValues:[]}));
+ drawAspects();
+ const note=document.createElement('div');
+ note.className='smalltext muted';
+ note.style.marginTop='8px';
+ note.innerHTML='<span class="pill">TEMPORARY</span> Generic category-specific fields are being used until live eBay Taxonomy access is restored.';
+ box.appendChild(note);
+}
+function swishLocalChooseCategory(id,name,path){
+ state.editor.categoryId=String(id);
+ state.editor.categoryName=name;
+ state.editor.categoryPath=path||'';
+ closeModal();
+ openEditor();
+ swishLocalLoadAspects();
+ toast('eBay UK category selected: '+name,'good');
+}
+
+/* Replace the broken live-category methods with the self-contained versions. */
+window.SWISH.openCategories=swishLocalOpenCategories;
+window.SWISH.loadCategories=swishLocalBrowseRootCategories;
+window.SWISH.searchCategories=swishLocalSearchCategories;
+window.SWISH.browseRootCategories=swishLocalBrowseRootCategories;
+window.SWISH.openCategoryNode=function(id,name,isLeaf){
+ const children=SWISH_TEMP_EBAY_GB_CATEGORIES.filter(x=>x.path.startsWith(name+' › ') || x.path.includes(' › '+name+' › '));
+ if(isLeaf){ swishLocalChooseCategory(id,name,name); return; }
+ const box=$('#catList'),note=$('#catNote');
+ if(!box)return;
+ const rows=children.filter(x=>x.path.split(' › ').indexOf(name)>=0 && x.leaf);
+ box.innerHTML=(rows.length?rows:SWISH_TEMP_EBAY_GB_CATEGORIES.filter(x=>x.leaf)).slice(0,60).map(c=>`<div class="catrow leaf" onclick="SWISH.chooseLiveCategory('${esc(c.id)}','${esc(c.name)}','${esc(c.path)}')"><span><b>${esc(c.name)}</b><small style="display:block;color:var(--muted);margin-top:3px">${esc(c.path)} · eBay UK ID ${esc(c.id)}</small></span><span class="arrow">✓ Leaf</span></div>`).join('');
+ note.innerHTML='<span class="pill">TEMPORARY OFFLINE MODE</span> Browsing the cached eBay UK categories';
+};
+window.SWISH.chooseLiveCategory=swishLocalChooseCategory;
+window.SWISH.loadAspectsIfNeeded=swishLocalLoadAspects;
+
 </script>
 </body>
 </html>
