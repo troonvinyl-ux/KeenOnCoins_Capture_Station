@@ -3,106 +3,484 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>SWISH — Coin Capture Dashboard</title>
+<meta name="theme-color" content="#0a0a0a">
+<title>SWISH — Coin Scan</title>
 <style>
-:root{--bg:#f5f7fa;--card:#fff;--text:#17202a;--muted:#6b7280;--line:#e5e7eb;--accent:#111827;--good:#16803c;--warn:#b7791f}
-*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
-button,input,select{font:inherit}.app{min-height:100vh;display:flex}.sidebar{width:250px;background:#111827;color:white;padding:22px 16px;position:fixed;inset:0 auto 0 0;z-index:10}.brand{font-size:25px;font-weight:800;margin:0 10px 28px}.brand span{opacity:.45;font-weight:500}.nav{display:grid;gap:7px}.nav button{border:0;background:transparent;color:#cbd5e1;text-align:left;padding:12px 13px;border-radius:10px;cursor:pointer}.nav button:hover,.nav button.active{background:#263244;color:#fff}.main{margin-left:250px;width:calc(100% - 250px);padding:28px;max-width:1500px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}.top h1{margin:0;font-size:28px}.top p{margin:5px 0 0;color:var(--muted)}.primary{background:#111827;color:#fff;border:0;padding:11px 17px;border-radius:10px;cursor:pointer;font-weight:700}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:19px;box-shadow:0 1px 2px #00000008}.stat .label{font-size:13px;color:var(--muted)}.stat .value{font-size:29px;font-weight:800;margin-top:8px}.section{margin-top:22px}.section h2{font-size:18px;margin:0 0 12px}.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.action{padding:20px;text-align:left;cursor:pointer}.action strong{display:block;font-size:17px;margin-bottom:6px}.action span{color:var(--muted);font-size:13px}.page{display:none}.page.active{display:block}.capture{max-width:1050px}.capturebox{border:2px dashed #cbd5e1;border-radius:18px;padding:35px;text-align:center;background:#fff}.capturebox h2{margin-top:0}.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}.field{display:grid;gap:6px;text-align:left}.field label{font-size:12px;color:var(--muted)}.field input{border:1px solid var(--line);border-radius:9px;padding:10px}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:12px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}.pill{display:inline-block;padding:4px 8px;border-radius:99px;background:#eef2ff;font-size:12px}.mobilebar{display:none}
-@media(max-width:800px){.sidebar{display:none}.main{margin:0;width:100%;padding:18px 15px 85px}.grid{grid-template-columns:repeat(2,1fr)}.actions{grid-template-columns:1fr}.mobilebar{display:flex;position:fixed;bottom:0;left:0;right:0;background:#111827;padding:8px;z-index:20;gap:5px}.mobilebar button{flex:1;background:transparent;border:0;color:#cbd5e1;padding:8px;font-size:11px}.mobilebar button.active{color:#fff}.top{align-items:flex-start}.top .primary{display:none}}
+:root{
+  --bg:#050505;--panel:#111;--panel2:#171717;--line:#2a2a2a;
+  --text:#fff;--muted:#a9a9a9;--accent:#ff9f1c;--green:#32d583;--red:#ff5b5b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input{font:inherit}
+button{border:0}
+.app{min-height:100%;display:flex;flex-direction:column;background:#000}
+.top{position:fixed;z-index:20;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top) + 12px) 16px 10px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:linear-gradient(#000b,transparent)}
+.brand{font-weight:800;letter-spacing:.04em;font-size:17px;background:none;color:#fff;padding:0;cursor:pointer}
+.status{font-size:12px;color:#ddd;background:#0008;padding:7px 10px;border-radius:999px;backdrop-filter:blur(8px)}
+.camera{position:relative;flex:1;min-height:100svh;overflow:hidden;background:#050505}
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.preview{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+.shade{position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,transparent 0 31%,#0009 32% 100%);pointer-events:none}
+.guide{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);
+  width:min(78vw,390px);aspect-ratio:1;border:2px solid #fff9;border-radius:50%;
+  box-shadow:0 0 0 9999px #0000;pointer-events:none}
+.guide:before,.guide:after{content:"";position:absolute;background:#fff8}
+.guide:before{width:24px;height:2px;left:50%;top:-2px;transform:translateX(-50%)}
+.guide:after{height:24px;width:2px;left:-2px;top:50%;transform:translateY(-50%)}
+.corner{position:absolute;width:28px;height:28px;border-color:#fff;border-style:solid}
+.c1{left:-2px;top:-2px;border-width:4px 0 0 4px;border-radius:12px 0 0 0}
+.c2{right:-2px;top:-2px;border-width:4px 4px 0 0;border-radius:0 12px 0 0}
+.c3{left:-2px;bottom:-2px;border-width:0 0 4px 4px;border-radius:0 0 0 12px}
+.c4{right:-2px;bottom:-2px;border-width:0 4px 4px 0;border-radius:0 0 12px 0}
+.hint{position:absolute;top:calc(env(safe-area-inset-top) + 70px);left:20px;right:20px;text-align:center;
+  font-size:15px;color:#fff;text-shadow:0 1px 8px #000;font-weight:650}
+.subhint{position:absolute;top:calc(env(safe-area-inset-top) + 96px);left:30px;right:30px;text-align:center;
+  font-size:12px;color:#ddd;text-shadow:0 1px 8px #000}
+.controls{position:absolute;left:0;right:0;bottom:0;padding:18px 20px calc(env(safe-area-inset-bottom) + 22px);
+  background:linear-gradient(transparent,#000e 45%);display:flex;align-items:center;justify-content:center;gap:28px}
+.circleBtn{width:58px;height:58px;border-radius:50%;background:#191919dd;color:#fff;border:1px solid #ffffff33;
+  display:grid;place-items:center;box-shadow:0 8px 24px #0008;cursor:pointer}
+.capture{width:82px;height:82px;border-radius:50%;background:#fff;border:7px solid #ffffff55;
+  box-shadow:0 0 0 2px #fff;cursor:pointer;transition:.15s}
+.capture:active{transform:scale(.94)}
+.capture.busy{opacity:.5;cursor:wait}
+.torch.on{background:#ff9f1c;color:#000}
+.file{display:none}
+.panel{position:fixed;z-index:30;left:0;right:0;bottom:0;max-height:78svh;overflow:auto;
+  background:#0c0c0cf5;border-top:1px solid #ffffff18;border-radius:26px 26px 0 0;
+  padding:18px 18px calc(env(safe-area-inset-bottom) + 22px);backdrop-filter:blur(18px);display:none}
+.panel.open{display:block}
+.handle{width:42px;height:4px;background:#555;border-radius:99px;margin:0 auto 18px}
+.row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+h2{margin:0 0 4px;font-size:24px}
+.muted{color:var(--muted);font-size:13px;line-height:1.45}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;margin-top:12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.metric{background:var(--panel2);border-radius:12px;padding:12px}
+.metric b{display:block;font-size:18px;margin-top:3px}
+.label{font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.08em}
+.btn{width:100%;padding:14px 16px;border-radius:13px;font-weight:750;cursor:pointer;margin-top:10px}
+.primary{background:var(--accent);color:#000}
+.secondary{background:#202020;color:#fff;border:1px solid #333}
+.good{color:var(--green)}
+.warn{color:var(--accent)}
+.error{color:var(--red)}
+.measure input{width:100%;margin-top:7px;background:#090909;color:#fff;border:1px solid #333;border-radius:10px;
+  padding:12px;outline:none}
+.measure input:focus{border-color:var(--accent)}
+.spinner{width:22px;height:22px;border:3px solid #ffffff22;border-top-color:var(--accent);border-radius:50%;
+  animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;z-index:100;left:16px;right:16px;bottom:18px;background:#181818;color:#fff;
+  padding:13px 15px;border-radius:12px;border:1px solid #333;display:none;box-shadow:0 10px 30px #000}
+canvas{display:none}
+.small{font-size:11px;color:#888}
+.source{word-break:break-all;color:#bdbdbd}
+@media(min-width:700px){
+  .camera{max-width:520px;width:520px;margin:auto;border-left:1px solid #222;border-right:1px solid #222}
+  .top{max-width:520px;left:50%;right:auto;width:520px;transform:translateX(-50%)}
+  .panel{max-width:520px;left:50%;right:auto;width:520px;transform:translateX(-50%)}
+}
 </style>
 </head>
 <body>
 <div class="app">
-<aside class="sidebar">
-  <div class="brand">SWISH <span>COINS</span></div>
-  <nav class="nav">
-    <button data-page="dashboard" class="active">▦ Dashboard</button>
-    <button data-page="capture">◎ Capture / Scanner</button>
-    <button data-page="inventory">▤ Inventory</button>
-    <button data-page="identification">◇ Identification</button>
-    <button data-page="valuation">£ Valuation</button>
-    <button data-page="listings">⌑ eBay Listings</button>
-    <button data-page="settings">⚙ Settings</button>
-  </nav>
-</aside>
+  <header class="top">
+    <button class="brand" id="dashboardBtn" type="button" title="Back to SWISH Dashboard">SWISH</button>
+    <div class="status" id="status">READY</div>
+  </header>
 
-<main class="main">
-<section id="dashboard" class="page active">
- <div class="top"><div><h1>Dashboard</h1><p>Your coin operation at a glance.</p></div><button class="primary" onclick="showPage('capture')">＋ New Capture</button></div>
- <div class="grid">
-  <div class="card stat"><div class="label">Inventory</div><div class="value" id="statInventory">0</div></div>
-  <div class="card stat"><div class="label">Unidentified</div><div class="value" id="statUnknown">0</div></div>
-  <div class="card stat"><div class="label">Ready to list</div><div class="value" id="statReady">0</div></div>
-  <div class="card stat"><div class="label">Estimated value</div><div class="value" id="statValue">£0</div></div>
- </div>
- <div class="section"><h2>Quick actions</h2><div class="actions">
-   <button class="card action" onclick="showPage('capture')"><strong>◎ Capture coins</strong><span>Photograph obverse, reverse and countermark, then record weight and diameter.</span></button>
-   <button class="card action" onclick="showPage('inventory')"><strong>▤ Open inventory</strong><span>Review captured coins and their listing status.</span></button>
-   <button class="card action" onclick="showPage('listings')"><strong>⌑ Create listings</strong><span>Turn captured coins into eBay-ready listings.</span></button>
- </div></div>
- <div class="section card"><h2>Recent captures</h2><div id="recent">No captures yet. Use <b>Capture / Scanner</b> to begin.</div></div>
-</section>
+  <main class="camera">
+    <video id="video" autoplay playsinline muted></video>
+    <img id="preview" class="preview" alt="Captured item">
+    <div class="shade"></div>
+    <div class="guide">
+      <span class="corner c1"></span><span class="corner c2"></span>
+      <span class="corner c3"></span><span class="corner c4"></span>
+    </div>
+    <div class="hint" id="hint">Place the coin inside the circle</div>
+    <div class="subhint">Fill the frame • avoid glare • hold steady</div>
 
-<section id="capture" class="page capture">
- <div class="top"><div><h1>Capture / Scanner</h1><p>Bulk silver coin capture station.</p></div></div>
- <div class="capturebox">
-  <h2>Capture a coin</h2>
-  <p>Take front, back and countermark images. Add physical measurements before sending the coin for identification and valuation.</p>
-  <div class="row">
-   <label class="primary" style="cursor:pointer">Front image <input id="front" type="file" accept="image/*" capture="environment" hidden></label>
-   <label class="primary" style="cursor:pointer">Back image <input id="back" type="file" accept="image/*" capture="environment" hidden></label>
-   <label class="primary" style="cursor:pointer">Countermark <input id="mark" type="file" accept="image/*" capture="environment" hidden></label>
-  </div><br>
-  <div class="row">
-   <div class="field"><label>Weight (g)</label><input id="weight" type="number" step="0.01" placeholder="e.g. 7.78"></div>
-   <div class="field"><label>Diameter (mm)</label><input id="diameter" type="number" step="0.1" placeholder="e.g. 23"></div>
-   <div class="field"><label>Capture note</label><input id="note" placeholder="Any visible text / marks"></div>
-  </div><br>
-  <button class="primary" onclick="saveCapture()">Save capture</button>
- </div>
-</section>
+    <div class="controls">
+      <button class="circleBtn" id="libraryBtn" title="Choose photo">＋</button>
+      <button class="capture" id="captureBtn" aria-label="Scan"></button>
+      <button class="circleBtn torch" id="torchBtn" title="Torch">☼</button>
+      <input id="fileInput" class="file" type="file" accept="image/*" capture="environment">
+    </div>
+  </main>
 
-<section id="inventory" class="page">
- <div class="top"><div><h1>Inventory</h1><p>Captured coins waiting for identification, valuation or listing.</p></div></div>
- <div class="card"><table class="table"><thead><tr><th>Coin</th><th>Weight</th><th>Diameter</th><th>Status</th><th>Value</th></tr></thead><tbody id="inventoryBody"><tr><td colspan="5">No captures yet.</td></tr></tbody></table></div>
-</section>
+  <section class="panel" id="resultPanel">
+    <div class="handle"></div>
+    <div id="result"></div>
+  </section>
 
-<section id="identification" class="page"><div class="top"><div><h1>Identification</h1><p>Review coins awaiting identification.</p></div></div><div class="card"><p>Captured coins will appear here for AI identification and manual confirmation.</p></div></section>
-<section id="valuation" class="page"><div class="top"><div><h1>Valuation</h1><p>Review suggested market values before listing.</p></div></div><div class="card"><p>Valuation results will appear here after identification. Values should be based on comparable market evidence rather than optimistic guesses.</p></div></section>
-<section id="listings" class="page"><div class="top"><div><h1>eBay Listings</h1><p>Prepare Buy It Now, auction and grouped listings.</p></div></div><div class="card"><p>No listings prepared yet.</p></div></section>
-<section id="settings" class="page"><div class="top"><div><h1>Settings</h1><p>Capture and listing preferences.</p></div></div><div class="card"><p>Settings will be connected to the existing SWISH configuration when integrated.</p></div></section>
-</main>
+  <canvas id="canvas"></canvas>
+  <div id="toast"></div>
 </div>
 
-<div class="mobilebar">
-<button data-page="dashboard" class="active">Dashboard</button>
-<button data-page="capture">Scanner</button>
-<button data-page="inventory">Inventory</button>
-<button data-page="listings">eBay</button>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const captures=JSON.parse(localStorage.getItem('swish_captures')||'[]');
-function showPage(page){
- document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===page));
- document.querySelectorAll('[data-page]').forEach(x=>x.classList.toggle('active',x.dataset.page===page));
- window.scrollTo(0,0);
+/*
+  SWISH WEB SCANNER
+  -----------------
+  This is a single-file web camera scanner designed to mirror the native SWISH
+  scan flow. Replace only the two public Supabase values below.
+
+  IMPORTANT:
+  - Never put eBay client secrets/tokens here.
+  - Never put Numista private/server credentials here.
+  - All protected API work belongs in Supabase Edge Functions.
+*/
+
+const SUPABASE_URL = 'https://iwgaqieyoahmcjfziwga.backend.onspace.ai';
+// CHILD PAGE: this scanner is opened from the SWISH Dashboard parent page.
+const DASHBOARD_URL = './dashboard.html';
+
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3ODkwNjM4MTgsImV4cCI6MjEwNDQyMzgxOCwicm9sZSI6ImFub24iLCJpc3MiOiJvbnNwYWNlIn0.cioQ38guPLFAbl3x48mUaJcMSxU5IpZn7-H-JhtvXJc';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let session=null, tenantId=null;
+
+const $ = id => document.getElementById(id);
+const video = $("video"), preview = $("preview"), canvas = $("canvas");
+const statusEl = $("status"), hint = $("hint"), panel = $("resultPanel"), result = $("result");
+let stream = null, capturedBlob = null, torchOn = false, busy = false, lastResult = null;
+
+function toast(msg){
+  const t=$("toast"); t.textContent=msg; t.style.display="block";
+  clearTimeout(window.__toast); window.__toast=setTimeout(()=>t.style.display="none",3000);
 }
-document.querySelectorAll('[data-page]').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
-function saveCapture(){
- const item={id:Date.now(),weight:document.getElementById('weight').value,diameter:document.getElementById('diameter').value,note:document.getElementById('note').value,status:'Unidentified',value:0};
- captures.unshift(item); localStorage.setItem('swish_captures',JSON.stringify(captures)); render(); showPage('inventory');
+function setStatus(s){statusEl.textContent=s}
+function escapeHtml(v){
+  return String(v ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 }
-function render(){
- document.getElementById('statInventory').textContent=captures.length;
- document.getElementById('statUnknown').textContent=captures.filter(x=>x.status==='Unidentified').length;
- document.getElementById('statReady').textContent=captures.filter(x=>x.status==='Ready').length;
- document.getElementById('statValue').textContent='£'+captures.reduce((a,x)=>a+(Number(x.value)||0),0).toFixed(0);
- const body=document.getElementById('inventoryBody');
- body.innerHTML=captures.length?captures.map((x,i)=>`<tr><td>Silver coin #${captures.length-i}</td><td>${x.weight||'—'} g</td><td>${x.diameter||'—'} mm</td><td><span class="pill">${x.status}</span></td><td>£${Number(x.value||0).toFixed(0)}</td></tr>`).join(''):'<tr><td colspan="5">No captures yet.</td></tr>';
- document.getElementById('recent').innerHTML=captures.length?`Latest capture: <b>Silver coin #${captures.length}</b> — ${captures[0].weight||'—'}g / ${captures[0].diameter||'—'}mm`:'No captures yet. Use <b>Capture / Scanner</b> to begin.';
+function money(v){
+  if(v==null || isNaN(Number(v))) return "—";
+  return "£"+Number(v).toFixed(2);
 }
-render();
+function pct(v){
+  if(v==null) return "—";
+  const n=Number(v); return (n<=1 ? n*100 : n).toFixed(0)+"%";
+}
+
+async function startCamera(){
+  if(!navigator.mediaDevices?.getUserMedia){
+    toast("Camera access is not available in this browser.");
+    return;
+  }
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:"environment"},width:{ideal:1920},height:{ideal:1080}},
+      audio:false
+    });
+    video.srcObject=stream;
+    const track=stream.getVideoTracks()[0];
+    const caps=track.getCapabilities?.() || {};
+    $("torchBtn").style.display = caps.torch ? "grid" : "grid";
+    setStatus("CAMERA READY");
+  }catch(e){
+    setStatus("CAMERA BLOCKED");
+    toast("Allow camera access, then reload SWISH.");
+  }
+}
+
+async function toggleTorch(){
+  const track=stream?.getVideoTracks?.()[0];
+  const caps=track?.getCapabilities?.() || {};
+  if(!caps.torch){toast("Torch is not available in this browser/device.");return}
+  torchOn=!torchOn;
+  try{await track.applyConstraints({advanced:[{torch:torchOn}]});$("torchBtn").classList.toggle("on",torchOn)}
+  catch(e){toast("Could not change torch.");}
+}
+
+function showProcessing(){
+  panel.classList.add("open");
+  result.innerHTML=`
+    <div class="row"><div><h2>Analysing…</h2><div class="muted">SWISH is checking the image, catalogue data and market evidence.</div></div></div>
+    <div class="card"><span class="spinner"></span><b>Identification in progress</b><div class="muted" style="margin-top:8px">Do not close the scanner.</div></div>`;
+}
+
+async function capture(){
+  if(busy || !video.videoWidth) return;
+  busy=true; $("captureBtn").classList.add("busy"); setStatus("CAPTURING");
+  canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+  const ctx=canvas.getContext("2d");
+  ctx.drawImage(video,0,0,canvas.width,canvas.height);
+  capturedBlob=await new Promise(r=>canvas.toBlob(r,"image/jpeg",0.92));
+  const url=URL.createObjectURL(capturedBlob);
+  preview.src=url; preview.style.display="block"; video.style.display="none";
+  hint.textContent="Photo captured";
+  showProcessing();
+  try{
+    lastResult=await runPipeline(capturedBlob);
+    renderResult(lastResult);
+  }catch(e){
+    console.error(e);
+    result.innerHTML=`<div class="row"><div><h2>Scan failed</h2><div class="muted">${escapeHtml(e.message||e)}</div></div></div>
+      <button class="btn primary" onclick="resetScan()">Try again</button>`;
+    toast("The scan could not be completed.");
+  }finally{
+    busy=false;$("captureBtn").classList.remove("busy");
+  }
+}
+
+async function uploadFile(file){
+  if(!file) return;
+  busy=true; setStatus("LOADING");
+  capturedBlob=file;
+  preview.src=URL.createObjectURL(file); preview.style.display="block"; video.style.display="none";
+  hint.textContent="Photo selected"; showProcessing();
+  try{lastResult=await runPipeline(file);renderResult(lastResult)}
+  catch(e){result.innerHTML=`<h2>Scan failed</h2><div class="muted">${escapeHtml(e.message||e)}</div><button class="btn primary" onclick="resetScan()">Try again</button>`}
+  finally{busy=false}
+}
+
+/*
+  Backend contract:
+  The native SWISH app already uses:
+    swish-identify
+    swish-market-value
+    swish-ebay-browse
+    swish-list-generate
+    swish-ebay-list
+
+  This web scanner calls the same canonical functions.
+*/
+async function ensureSession(){
+  const {data}=await sb.auth.getSession();
+  session=data.session;
+  if(!session) throw new Error("Please sign in to SWISH first. The valuation engine uses your existing SWISH account and connected eBay account.");
+  if(!tenantId){
+    const {data:tm,error}=await sb.from("tenant_memberships").select("tenant_id").eq("user_id",session.user.id).limit(1).maybeSingle();
+    if(error || !tm?.tenant_id) throw new Error("No SWISH tenant was found for this account.");
+    tenantId=tm.tenant_id;
+  }
+  return session;
+}
+async function invoke(name, body){
+  await ensureSession();
+  const {data,error}=await sb.functions.invoke(name,{body:{...body,tenantId}});
+  if(error) throw new Error(name+": "+(error.message||"request failed"));
+  if(data?.error) throw new Error(data.error);
+  return data;
+}
+
+async function blobToDataUrl(blob){
+  return await new Promise((resolve,reject)=>{
+    const r=new FileReader(); r.onload=()=>resolve(r.result); r.onerror=reject; r.readAsDataURL(blob);
+  });
+}
+
+async function runPipeline(blob){
+  const imageData=await blobToDataUrl(blob);
+  await ensureSession();
+
+  // REAL SWISH identification: the same canonical Edge Function used by the native app.
+  const identified=await invoke("swish-identify",{
+    images:[imageData],
+    specialistId:"coins",
+    acquisitionContext:"Web CoinSnap-style camera scan"
+  });
+
+  const id=identified?.identification || identified;
+  const attrs=id?.attributes || id?.attributesConfirmed || {};
+  const title=id?.canonicalTitle || id?.title || [attrs.country,attrs.denomination,attrs.year_made||attrs.yearMade].filter(Boolean).join(" ") || "Identified coin";
+  const numista=id?.numistaVerification || {};
+
+  // REAL SWISH market valuation: eBay verified sold + Numista sales/reference + active asking.
+  let valuation=null;
+  try{
+    valuation=await invoke("swish-market-value",{
+      title,
+      specialistId:"coins",
+      attributes:attrs,
+      condition:id?.condition || id?.grade || "",
+      identificationConfidence:Number(id?.confidence||0),
+      identificationTier:id?.confidenceTier || "medium",
+      numistaTypeId:Number(id?.numistaTypeId || numista.typeId || attrs.numista_type_id || 0) || undefined,
+      numistaMatchScore:Number(id?.numistaMatchScore || numista.matchScore || 0),
+      numistaMatchTier:id?.numistaMatchTier || numista.status || "no_match",
+      applyToItem:false
+    });
+  }catch(e){
+    valuation={error:e.message};
+  }
+
+  return {identified,valuation,imageData,itemId:null};
+}
+function getId(r){
+  const x=r?.identified?.identification || r?.identified?.result || r?.identified?.item || r?.identified || {};
+  const a=x.attributes || x.attributesConfirmed || {};
+  const n=x.numistaVerification || {};
+  return {
+    title:x.canonicalTitle || x.title || x.name || x.identification || "Identification pending",
+    country:x.country || a.country || x.issuerCountry,
+    denomination:x.denomination || a.denomination,
+    year:x.year || a.year_made || a.yearMade || x.date,
+    confidence:x.confidence ?? x.confidenceScore,
+    numista:n.numistaN || x.numistaN || a.numista_n || a.numista_type_id,
+    numistaStatus:n.status || x.numistaStatus,
+    numistaUrl:n.numistaUrl || x.numistaUrl,
+    numistaScore:n.matchScore || x.numistaMatchScore,
+    weight:a.catalogue_weight || a.weight || n.weight || x.weight,
+    diameter:a.catalogue_diameter || a.diameter || n.diameter || x.diameter,
+    composition:a.composition || n.composition || x.composition,
+    edge:a.edge || n.edge || x.edge,
+    condition:x.condition || x.grade,
+    explanation:x.explanation || x.reasoning
+  };
+}
+function getVal(r){
+  const v=r?.valuation?.valuation || r?.valuation || {};
+  const sold=r?.valuation?.soldMarket || r?.soldMarket || {};
+  const combined=r?.valuation?.combinedEvidence || r?.combinedEvidence || {};
+  const numistaSales=r?.valuation?.numistaSales || r?.numistaSales || null;
+  const numistaRef=r?.valuation?.numistaReferencePrice || r?.numistaReferencePrice || null;
+  const active=r?.valuation?.activeAskingPrices || r?.activeAskingPrices || null;
+  return {
+    low:v.valuationLow ?? v.low ?? combined.combinedLow ?? 0,
+    fair:v.valuationMid ?? v.fairMarketValue ?? combined.combinedMedian ?? 0,
+    high:v.valuationHigh ?? v.high ?? combined.combinedHigh ?? 0,
+    quick:v.recommendedListingPrice ?? v.suggestedQuickSalePrice ?? 0,
+    confidence:v.valuationConfidence,
+    soldCount:sold.relevantSoldCount ?? combined.ebayRelevant ?? 0,
+    soldMedian:sold.weightedMedianPrice ?? sold.medianPrice ?? 0,
+    numistaCount:numistaSales?.relevantCount ?? combined.numistaRelevant ?? 0,
+    numistaMedian:numistaSales?.median ?? 0,
+    numistaRef,
+    activeMedian:active?.medianAskingPrice ?? 0,
+    activeCount:active?.count ?? 0,
+    method:v.valuationMethod,
+    warnings:v.valuationWarnings || [],
+    rationale:v.listingPriceRationale || ''
+  };
+}
+function renderResult(r){
+  const id=getId(r), v=getVal(r);
+  panel.classList.add("open");
+  const ref=v.numistaRef;
+  const main=v.fair>0 ? `<div class="bigPrice">${money(v.fair)}</div><div class="muted">Evidence-backed estimated market value</div>
+    <div class="range" style="margin-top:10px">${money(v.low)} – ${money(v.high)}</div>` :
+    ref?.available && ref.median>0 ? `<div class="bigPrice">${money(ref.median)}</div><div class="muted">Numista reference indication</div>
+    <div class="range" style="margin-top:10px">${money(ref.low)} – ${money(ref.high)}</div>` :
+    `<div class="bigPrice">—</div><div class="muted">No defensible value returned</div>`;
+  result.innerHTML=`
+    <div class="row"><div><h2>${escapeHtml(id.title)}</h2><div class="muted">${escapeHtml([id.country,id.denomination,id.year].filter(Boolean).join(" • "))}</div></div>
+    <div class="${Number(id.confidence)>=.8?'good':'warn'}"><b>${pct(id.confidence)}</b><div class="small">ID confidence</div></div></div>
+    <div class="card"><div class="label">Real market valuation</div>${main}
+      <div class="grid" style="margin-top:13px">
+        <div class="metric"><span class="label">Quick sale</span><b>${money(v.quick)}</b></div>
+        <div class="metric"><span class="label">eBay sold</span><b>${v.soldCount}</b></div>
+        <div class="metric"><span class="label">Numista sales</span><b>${v.numistaCount}</b></div>
+        <div class="metric"><span class="label">Active asking</span><b>${money(v.activeMedian)}</b></div>
+      </div>
+      <div class="muted" style="margin-top:10px">Active asking prices are shown separately and are not treated as sold evidence.</div>
+      ${v.warnings?.length?`<div class="banner">${escapeHtml(v.warnings.join(" "))}</div>`:""}
+    </div>
+    <div class="card"><div class="label">Catalogue</div>
+      <div class="grid" style="margin-top:10px">
+        <div class="metric"><span class="label">Numista</span><b>${escapeHtml(id.numista||"—")}</b></div>
+        <div class="metric"><span class="label">Status</span><b>${escapeHtml(id.numistaStatus||"—")}</b></div>
+        <div class="metric"><span class="label">Weight</span><b>${escapeHtml(id.weight??"—")} g</b></div>
+        <div class="metric"><span class="label">Diameter</span><b>${escapeHtml(id.diameter??"—")} mm</b></div>
+        <div class="metric"><span class="label">Composition</span><b>${escapeHtml(id.composition??"—")}</b></div>
+        <div class="metric"><span class="label">Edge</span><b>${escapeHtml(id.edge??"—")}</b></div>
+      </div>
+      <div class="muted" style="margin-top:10px">Source: Numista${id.numista?` · ${escapeHtml(id.numista)}`:""}</div>
+    </div>
+    <div class="card measure"><div class="label">Physical verification</div>
+      <div class="muted" style="margin-top:6px">Catalogue values stay separate. Enter the actual coin measurements and SWISH will re-run identification.</div>
+      <label class="small" style="display:block;margin-top:10px">Measured weight (g)<input id="measuredWeight" type="number" step="0.01" inputmode="decimal" placeholder="${escapeHtml(id.weight??"5.00")}"></label>
+      <label class="small" style="display:block;margin-top:10px">Measured diameter (mm)<input id="measuredDiameter" type="number" step="0.01" inputmode="decimal" placeholder="${escapeHtml(id.diameter??"24.00")}"></label>
+      <button class="btn primary" onclick="confirmMeasurements()">Confirm & re-check</button>
+    </div>
+    <div class="card"><div class="label">Coin design</div><div class="muted" style="margin-top:8px">${escapeHtml(id.explanation||"Design descriptions are retained from the identification evidence.")}</div></div>
+    <button class="btn secondary" onclick="resetScan()">Scan another coin</button>`;
+  setStatus("REAL VALUE READY");
+}
+async function confirmMeasurements(){
+  if(!lastResult) return;
+  const weight=$('measuredWeight')?.value || null;
+  const diameter=$('measuredDiameter')?.value || null;
+  if(!weight && !diameter){toast('Enter at least weight or diameter.');return}
+  setStatus('RE-CHECKING');
+  try{
+    const old=getId(lastResult);
+    const oldAttrs=lastResult.identified?.identification?.attributes || lastResult.identified?.attributes || {};
+    const checked=await invoke('swish-identify',{
+      images:[lastResult.imageData], specialistId:'coins',
+      knownAttributes:{...oldAttrs,weight:Number(weight)||undefined,diameter:Number(diameter)||undefined}
+    });
+    lastResult.identified=checked;
+    lastResult.valuation=null;
+    renderResult(lastResult);
+    await new Promise(r=>setTimeout(r,50));
+    const x=checked?.identification||checked;
+    const attrs=x.attributes||{};
+    try{
+      lastResult.valuation=await invoke('swish-market-value',{
+        title:x.canonicalTitle||old.title||'Identified coin', specialistId:'coins', attributes:attrs,
+        condition:x.condition||x.grade||'', identificationConfidence:Number(x.confidence||0),
+        identificationTier:x.confidenceTier||'medium', numistaTypeId:Number(x.numistaTypeId||x.numistaVerification?.typeId||attrs.numista_type_id||0)||undefined,
+        numistaMatchScore:Number(x.numistaMatchScore||x.numistaVerification?.matchScore||0),
+        numistaMatchTier:x.numistaMatchTier||x.numistaVerification?.status||'no_match', applyToItem:false
+      });
+      renderResult(lastResult);
+    }catch(e){toast('Identification updated, but valuation could not be refreshed: '+e.message)}
+  }catch(e){toast(e.message||'Re-check failed');setStatus('ERROR')}
+}
+async function saveToInventory(){
+  if(!lastResult) return;
+  setStatus("SAVING");
+  try{
+    const id=getId(lastResult), v=getVal(lastResult);
+    const body={
+      source:"web_camera",
+      images:[lastResult.imageData],
+      identification:lastResult.identified,
+      valuation:lastResult.valuation,
+      measuredWeight:Number($("measuredWeight")?.value)||null,
+      measuredDiameter:Number($("measuredDiameter")?.value)||null,
+      measuredThickness:Number($("measuredThickness")?.value)||null
+    };
+    // Prefer the existing listing/inventory backend contract if available.
+    const saved=await invoke("swish-list-generate",{mode:"inventory_save",item:body});
+    toast("Item added to SWISH.");
+    setStatus("SAVED");
+    // Keep the screen useful after save.
+    result.insertAdjacentHTML("afterbegin",
+      `<div class="card"><b class="good">✓ Saved to SWISH inventory</b>
+      <div class="muted" style="margin-top:5px">You can now continue into the three-stage eBay listing workflow.</div></div>`);
+  }catch(e){
+    // Do not silently pretend it saved.
+    setStatus("SAVE ERROR");
+    toast("Inventory save failed: "+(e.message||e));
+  }
+}
+
+function resetScan(){
+  panel.classList.remove("open"); result.innerHTML="";
+  preview.style.display="none"; video.style.display="block";
+  hint.textContent="Place the coin inside the circle";
+  setStatus("CAMERA READY"); capturedBlob=null; lastResult=null;
+}
+
+$("captureBtn").addEventListener("click",capture);
+$("libraryBtn").addEventListener("click",()=>$("fileInput").click());
+$("fileInput").addEventListener("change",e=>uploadFile(e.target.files?.[0]));
+$("torchBtn").addEventListener("click",toggleTorch);
+$("dashboardBtn").addEventListener("click",()=>{
+  if (window.history.length > 1) window.history.back();
+  else window.location.href = DASHBOARD_URL;
+});
+window.addEventListener("load",startCamera);
+window.resetScan=resetScan;
+window.confirmMeasurements=confirmMeasurements;
+window.saveToInventory=saveToInventory;
 </script>
 </body>
 </html>
