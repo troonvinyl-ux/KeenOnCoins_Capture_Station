@@ -796,165 +796,208 @@ function categoryHtml(){
  </div>`;
 }
 /*
- CATEGORY ENGINE — OFFLINE FIRST
- The native SWISH source already contains a verified fallback catalogue.
- The previous web build incorrectly depended on a non-existent/unsupported
- get_category_children route and therefore waited until a timeout.
- This version never blocks the editor on taxonomy networking.
+ CATEGORY ENGINE — LIVE EBAY TAXONOMY ONLY
+ The existing production swish-ebay-list function documents a Taxonomy API
+ resolver and uses eBay Taxonomy as the sole authority for leaf categories.
+ The browser must therefore ask that server function for live candidates.
+ No hard-coded/fallback category is ever presented as an eBay category.
 */
-const CATEGORY_CATALOG=[
- {id:'4726',name:'British Coins',group:'Coins',keywords:'british uk england gb penny pound sovereign'},
- {id:'40714',name:'Ancient Coins',group:'Coins',keywords:'ancient'},
- {id:'18594',name:'Medieval Coins',group:'Coins',keywords:'medieval'},
- {id:'18593',name:'Hammered Coins',group:'Coins',keywords:'hammered'},
- {id:'4157',name:'Roman Coins',group:'Coins',keywords:'roman rome'},
- {id:'4158',name:'Greek Coins',group:'Coins',keywords:'greek greece hellenistic'},
- {id:'4199',name:'Islamic & Oriental Coins',group:'Coins',keywords:'islamic muslim arabic oriental dirham dinar'},
- {id:'4200',name:'Indian Coins',group:'Coins',keywords:'indian india rupee mughal'},
- {id:'527',name:'Coin Collections & Lots',group:'Coins',keywords:'collection collections lot joblot job lot coins'},
- {id:'13956',name:'Militaria',group:'Militaria',keywords:'militaria military'},
- {id:'37958',name:'Medals: Campaign',group:'Medals',keywords:'campaign medal war service'},
- {id:'37959',name:'Medals: Gallantry & Bravery',group:'Medals',keywords:'gallantry bravery victoria cross medal'},
- {id:'37960',name:'Medals: Long Service & Good Conduct',group:'Medals',keywords:'long service good conduct medal'},
- {id:'66863',name:'Medals: Orders & Decorations',group:'Medals',keywords:'order decoration medal'},
- {id:'37964',name:'Medals: Commemorative',group:'Medals',keywords:'commemorative medal'},
- {id:'37965',name:'Medals: Other',group:'Medals',keywords:'medal medals'},
- {id:'37961',name:'Militaria: Badges & Insignia',group:'Militaria',keywords:'badge badges insignia cap badge'},
- {id:'37963',name:'Militaria: Documents & Paperwork',group:'Militaria',keywords:'document paperwork military'},
- {id:'261',name:'GB Stamps',group:'Stamps',keywords:'stamp stamps postal'},
- {id:'183454',name:'Trading Cards / CCG',group:'Collectables',keywords:'trading card pokemon magic yugioh tcg'},
- {id:'2536',name:'Postcards',group:'Collectables',keywords:'postcard postcards'},
- {id:'2534',name:'Cigarette Cards',group:'Collectables',keywords:'cigarette card'},
- {id:'20091',name:'Antique Furniture',group:'Antiques',keywords:'furniture antique'},
- {id:'870',name:'Ceramics & Pottery',group:'Antiques',keywords:'ceramic pottery porcelain'},
- {id:'11675',name:'Maps & Atlases',group:'Books & Paper',keywords:'map maps atlas atlases'},
- {id:'261186',name:'Rare & Antiquarian Books',group:'Books & Paper',keywords:'book books antiquarian rare'},
- {id:'50',name:'Fine Jewellery',group:'Jewellery',keywords:'jewellery jewelry ring necklace'},
- {id:'14324',name:'Wristwatches',group:'Watches',keywords:'watch watches wristwatch'},
- {id:'14325',name:'Pocket Watches',group:'Watches',keywords:'pocket watch'},
- {id:'3252',name:'Silver: Antique',group:'Antiques',keywords:'silver antique'},
- {id:'1469',name:'Other Collectables',group:'Collectables',keywords:'collectable collectables collectible'}
-];
-
-const CATEGORY_GROUPS=['All',...Array.from(new Set(CATEGORY_CATALOG.map(x=>x.group)))];
-
-function categoryMatches(c,q){
- const s=(c.name+' '+c.group+' '+c.keywords).toLowerCase();
- return !q || q.split(/\s+/).filter(Boolean).every(w=>s.includes(w));
+function categoryHtml(){
+ return `<div class="field">
+   <label>Search live eBay UK categories</label>
+   <div class="searchbar">
+     <input id="catSearch" placeholder="e.g. ancient silver coin, medal, binoculars, books…" onkeydown="if(event.key==='Enter')SWISH.searchCategories()">
+     <button class="btn primary" onclick="SWISH.searchCategories()">Search eBay</button>
+   </div>
+ </div>
+ <div id="catNote" class="smalltext muted" style="margin:8px 0 12px">
+   eBay Taxonomy is the authority. SWISH will only show categories returned by the live server-side eBay resolver and marked as leaf categories.
+ </div>
+ <div class="category-browser">
+   <div>
+     <div class="smalltext muted" style="margin-bottom:6px">Live eBay results</div>
+     <div id="catList" class="category-list"><div class="empty">Enter a product description or search term.</div></div>
+   </div>
+   <div>
+     <div class="smalltext muted" style="margin-bottom:6px">Selection</div>
+     <div id="catSelection" class="card">
+       <b id="catSelectedName">${esc(state.editor?.categoryName||'No category selected')}</b>
+       <p class="muted smalltext" id="catSelectedId">Category ID: ${esc(state.editor?.categoryId||'—')}</p>
+       <p class="muted smalltext">Only a category returned by eBay's Taxonomy resolver can be selected.</p>
+     </div>
+   </div>
+ </div>`;
 }
 
-function categoryScore(c,q){
- if(!q)return 0;
- const words=q.split(/\s+/).filter(Boolean);
- let score=0;
- for(const w of words){
-   if(c.name.toLowerCase().includes(w))score+=10;
-   if(c.keywords.toLowerCase().split(/\s+/).includes(w))score+=6;
-   if(c.group.toLowerCase().includes(w))score+=3;
- }
- return score;
-}
-
-function categorySuggestionsForTitle(){
- const title=(state.editor?.title||'').toLowerCase();
- return CATEGORY_CATALOG
-   .map(c=>({...c,score:categoryScore(c,title)}))
-   .filter(c=>c.score>0)
-   .sort((a,b)=>b.score-a.score)
-   .slice(0,5);
-}
-
-function renderCategoryCatalog(q=''){
- const group=state.category.group||'All';
- let rows=CATEGORY_CATALOG.filter(c=>(group==='All'||c.group===group)&&categoryMatches(c,q));
- if(q)rows.sort((a,b)=>categoryScore(b,q)-categoryScore(a,q));
- const box=$('#catList');if(!box)return;
-
- if(!rows.length){
-   box.innerHTML='<div class="empty">No matching SWISH category found. Try a broader search such as <b>coin</b>, <b>medal</b>, <b>militaria</b> or enter an eBay category ID manually.</div>';
- }else{
-   box.innerHTML=rows.map(c=>`
-    <div class="catrow leaf" onclick="SWISH.chooseCategory('${esc(c.id)}','${esc(c.name)}')">
-      <span><b>${esc(c.name)}</b><small style="display:block;color:var(--muted);margin-top:3px">${esc(c.group)} · eBay ID ${esc(c.id)}</small></span>
-      <span class="arrow">✓</span>
-    </div>`).join('');
+function openCategories(){
+ openModal('Live eBay UK category browser',categoryHtml());
+ const title=state.editor?.title?.trim()||'';
+ if(title){
+   $('#catSearch').value=title;
+   searchCategories();
  }
 }
 
-function showCategoryFallback(message){
- renderCategoryCatalog($('#catSearch')?.value||'');
- const note=$('#catNote');
- if(note)note.innerHTML=`<span class="pill good">SWISH catalogue</span> ${esc(message||'Offline-first category selector. No waiting for the live taxonomy service.')}`;
-}
+function normaliseLiveCategoryResults(data){
+ const raw=
+   data?.categories||
+   data?.suggestions||
+   data?.categorySuggestions||
+   data?.leafCategories||
+   data?.results||
+   data?.candidates||
+   [];
 
-async function loadCategories(parentId=''){
- // Intentionally no network request. The old get_category_children route is not
- // implemented in the supplied Edge Function source and caused the 12-second hang.
- state.category.parent=parentId;
- state.category.items=CATEGORY_CATALOG.map(x=>({...x,isLeaf:true}));
- state.category.group='All';
- state.category.crumbs=[];
- showCategoryFallback('No live taxonomy dependency. Category selection is available immediately.');
-}
+ const arr=Array.isArray(raw)?raw:[raw];
+ const out=[];
 
-function drawCategories(){
- renderCategoryCatalog($('#catSearch')?.value||'');
+ function add(x, inheritedPath=[]){
+   if(!x||typeof x!=='object')return;
+   const c=x.category||x.categoryRef||x.leafCategory||x;
+   const id=String(c?.id??c?.categoryId??x?.id??x?.categoryId??'');
+   const name=String(c?.name??c?.categoryName??x?.name??x?.categoryName??'');
+   const leaf=
+     c?.leafCategoryTreeNode===true ||
+     x?.leafCategoryTreeNode===true ||
+     c?.isLeaf===true ||
+     x?.isLeaf===true ||
+     x?.leaf===true ||
+     x?.verifiedLeaf===true ||
+     x?.wasResolved===true ||
+     x?.confidence==='high' ||
+     x?.confidence==='verified';
+
+   const ancestors=[
+     ...(Array.isArray(x?.categoryTreeNodeAncestors)?x.categoryTreeNodeAncestors:[]),
+     ...(Array.isArray(c?.categoryTreeNodeAncestors)?c.categoryTreeNodeAncestors:[]),
+     ...inheritedPath
+   ].map(a=>a?.categoryName||a?.name).filter(Boolean);
+
+   if(id&&name&&leaf){
+     const key=id+'|'+name;
+     if(!out.some(r=>r.key===key)){
+       out.push({key,id,name,leaf:true,path:[...new Set([...ancestors,name])].join(' › ')});
+     }
+   }
+
+   if(Array.isArray(x?.children))x.children.forEach(ch=>add(ch,[...ancestors,name]));
+   if(Array.isArray(x?.childCategoryTreeNodes))x.childCategoryTreeNodes.forEach(ch=>add(ch,[...ancestors,name]));
+ }
+ arr.forEach(x=>add(x));
+
+ // Some versions of the resolver return a single resolved object.
+ if(!out.length){
+   const candidates=[
+     data?.resolvedCategory,
+     data?.category,
+     data?.resolved,
+     data?.result
+   ].filter(Boolean);
+   candidates.forEach(x=>add(x));
+ }
+
+ return out;
 }
 
 async function searchCategories(){
  const q=($('#catSearch')?.value||'').trim();
- renderCategoryCatalog(q);
+ const box=$('#catList');
  const note=$('#catNote');
- if(note)note.innerHTML=`<span class="pill good">${CATEGORY_CATALOG.filter(c=>categoryMatches(c,q)).length} matches</span> SWISH category catalogue`;
+ if(!q){
+   box.innerHTML='<div class="empty">Enter a product description or search term.</div>';
+   return;
+ }
+ box.innerHTML='<div class="empty">Asking eBay Taxonomy for live leaf categories…</div>';
+ note.innerHTML='<span class="pill">LIVE</span> Querying the existing SWISH server-side eBay category resolver…';
+
+ try{
+   if(!state.tenant)throw new Error('Sign in to SWISH first.');
+   /*
+     Important: resolve_category is the production route documented by the
+     existing swish-ebay-list Edge Function. It keeps eBay credentials server-side.
+   */
+   const data=await fn(FN.list,{
+     route:'resolve_category',
+     tenantId:state.tenant.id,
+     title:q,
+     searchQuery:q,
+     categoryId:'',
+     specialistId:''
+   });
+
+   const rows=normaliseLiveCategoryResults(data);
+
+   if(!rows.length){
+     // Do NOT substitute fake categories.
+     throw new Error('eBay returned no verified leaf categories for that search.');
+   }
+
+   state.category.items=rows;
+   box.innerHTML=rows.map((c,i)=>`
+     <div class="catrow leaf" onclick="SWISH.chooseLiveCategory('${esc(c.id)}','${esc(c.name)}','${esc(c.path)}')">
+       <span>
+         <b>${esc(c.name)}</b>
+         <small style="display:block;color:var(--muted);margin-top:3px">${esc(c.path||'eBay UK')} · ID ${esc(c.id)}</small>
+       </span>
+       <span class="arrow">✓ Leaf</span>
+     </div>`).join('');
+
+   note.innerHTML=`<span class="pill good">${rows.length} LIVE</span> eBay leaf categories returned`;
+   log(`eBay taxonomy: ${rows.length} live leaf categories for "${q}"`);
+ }catch(e){
+   const msg=e?.message||'Live eBay category lookup failed.';
+   box.innerHTML=`<div class="empty" style="border-color:#71313d">
+     <b style="color:var(--bad)">Live eBay category lookup failed</b>
+     <p class="smalltext muted">${esc(msg)}</p>
+     <button class="btn small" onclick="SWISH.searchCategories()">Retry live search</button>
+   </div>`;
+   note.innerHTML='<span class="pill bad">LIVE LOOKUP FAILED</span> No category has been invented or substituted.';
+   log('eBay taxonomy ERROR: '+msg);
+ }
 }
 
-function chooseCategory(id,name){
+function chooseLiveCategory(id,name,path){
  state.editor.categoryId=id;
  state.editor.categoryName=name;
+ state.editor.categoryPath=path||'';
  closeModal();
  openEditor();
- // Do not call a broken live taxonomy endpoint here.
- loadLocalAspects(id,name);
- toast('Category selected: '+name,'good');
+ loadAspectsIfNeeded();
+ toast('Live eBay category selected: '+name,'good');
 }
 
-function loadLocalAspects(id,name){
- const box=$('#aspectsBox');if(!box)return;
- const n=(name||'').toLowerCase();
- let specs=[];
- if(n.includes('coin')){
-   specs=[
-    ['Country/Region',''],['Denomination',''],['Year',''],['Era',''],
-    ['Composition',''],['KM Number',''],['Certification',''],['Grade',''],
-    ['Circulated/Uncirculated',''],['Modified Item','']
-   ];
- }else if(n.includes('medal')||n.includes('militaria')){
-   specs=[['Conflict/Period',''],['Country',''],['Service',''],['Era',''],['Type',''],['Material',''],['Original/Reproduction','']];
- }else if(n.includes('stamp')){
-   specs=[['Year of Issue',''],['Era',''],['Grade',''],['Certification',''],['Country/Region',''],['Colour','']];
- }else{
-   specs=[['Brand',''],['Type',''],['Material',''],['Era',''],['Country/Region',''],['Condition','']];
+async function loadCategories(){
+ // Kept as a compatibility method for any existing UI callers.
+ // It deliberately does not manufacture a tree.
+ openCategories();
+}
+
+async function loadAspectsIfNeeded(){
+ const d=state.editor;
+ const box=$('#aspectsBox');
+ if(!d?.categoryId||!box)return;
+ box.innerHTML='<div class="empty">Loading live eBay item specifics for this leaf category…</div>';
+ try{
+   const data=await fn(FN.list,{
+     route:'get_category_aspects',
+     tenantId:state.tenant.id,
+     categoryId:d.categoryId
+   });
+   const aspects=data?.aspects||data?.itemAspects||data?.categoryAspects||[];
+   if(!Array.isArray(aspects)||!aspects.length){
+     throw new Error('eBay returned no item-specific metadata for this category.');
+   }
+   state.aspects=aspects;
+   drawAspects();
+ }catch(e){
+   box.innerHTML=`<div class="empty" style="border-color:#71313d">
+     <b style="color:var(--bad)">Live eBay item specifics unavailable</b>
+     <p class="smalltext muted">${esc(e.message||e)}</p>
+     <button class="btn small" onclick="SWISH.loadAspectsIfNeeded()">Retry</button>
+   </div>`;
  }
- const existing=Object.fromEntries((state.editor.itemSpecifics||[]).map(x=>[x.name,x.value]));
- state.aspects=specs.map(([name])=>({localizedAspectName:name,name,required:false,values:[],local:true}));
- box.innerHTML='<div class="aspect-grid">'+specs.map(([name])=>`
-  <div class="aspect">
-   <div class="aspect-name">${esc(name)}</div>
-   <input data-aspect="${esc(name)}" value="${esc(existing[name]||'')}" oninput="SWISH.setAspect(this.dataset.aspect,this.value)">
-  </div>`).join('')+'</div><p class="muted smalltext" style="margin:10px 0 0">These are SWISH working item specifics. Before publishing, the existing server-side eBay validation remains authoritative.</p>';
 }
 
-function setCategoryGroup(group){
- state.category.group=group||'All';
- renderCategoryCatalog($('#catSearch')?.value||'');
-}
-function suggestCategory(){
- const suggestions=categorySuggestionsForTitle();
- if(!suggestions.length){toast('Add a few words to the listing title first','bad');return}
- const box=$('#catList');
- box.innerHTML='<div style="padding:9px 10px;color:var(--good);font-size:10px;border-bottom:1px solid var(--line)">SWISH suggestions based on the current listing title</div>'+
- suggestions.map(c=>`<div class="catrow leaf" onclick="SWISH.chooseCategory('${esc(c.id)}','${esc(c.name)}')"><span><b>${esc(c.name)}</b><small style="display:block;color:var(--muted);margin-top:3px">${esc(c.group)} · score ${c.score}</small></span><span class="arrow">Use</span></div>`).join('');
-}
 function loadCategoryCrumb(i){const c=state.category.crumbs[i];state.category.crumbs=state.category.crumbs.slice(0,i+1);loadCategories(c.id)}
 function chooseCategory(id,name){
  state.editor.categoryId=id;state.editor.categoryName=name;closeModal();openEditor();loadAspectsIfNeeded();toast('Category selected','good');
@@ -1050,7 +1093,7 @@ window.SWISH={
  sync,syncImages,syncOrders,syncOffers,syncMessages,syncPostOrder,
  openMessage,replyMessage,sendReply,runCommand,research,
  previewImage,identifyCoin,islamicScan,calculate,previewCsv,
- openCategories,loadCategories,searchCategories,chooseCategory,loadAspectsIfNeeded,setAspect,setCategoryGroup,suggestCategory,
+ openCategories,loadCategories,searchCategories,chooseLiveCategory,loadAspectsIfNeeded,setAspect,
  addEditorImages,removeEditorImage,clearLog,refreshSettings,
  editor:state.editor
 };
