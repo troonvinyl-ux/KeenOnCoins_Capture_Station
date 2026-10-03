@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111f">
-<title>SWISH — Seller Intelligence</title>
+<title>SWISH — Full Web Seller Intelligence</title>
 <style>
 :root{
  --bg:#07111f;--panel:#0d1a2c;--panel2:#10223a;--panel3:#132945;--line:#1d3552;
@@ -156,18 +156,37 @@ tr.clickable:hover{background:#10233a;cursor:pointer}
   </div>
 
   <div class="navgroup">
+    <div class="navgroup-title">eBay Account</div>
+    <button class="nav" data-page="account"><span class="ico">●</span>eBay Account</button>
+    <button class="nav" data-page="money"><span class="ico">£</span>Money</button>
+  </div>
+  <div class="navgroup">
     <div class="navgroup-title">SWISH Intelligence</div>
     <button class="nav" data-page="intelligence"><span class="ico">✦</span>Command Centre</button>
     <button class="nav" data-page="research"><span class="ico">⌁</span>Research Agent</button>
     <button class="nav" data-page="scan"><span class="ico">◎</span>Coin Scan</button>
     <button class="nav" data-page="calculations"><span class="ico">∑</span>Calculations</button>
+    <button class="nav" data-page="islamic"><span class="ico">◈</span>Islamic Batch ID</button>
   </div>
 
+  <div class="navgroup">
+    <div class="navgroup-title">SWISH Operations</div>
+    <button class="nav" data-page="acquisitions"><span class="ico">◎</span>Acquisitions</button>
+    <button class="nav" data-page="opportunities"><span class="ico">◆</span>Opportunities</button>
+    <button class="nav" data-page="dispatch"><span class="ico">⇢</span>Dispatch</button>
+    <button class="nav" data-page="tasks"><span class="ico">✓</span>Tasks</button>
+    <button class="nav" data-page="review"><span class="ico">!</span>Review Required</button>
+    <button class="nav" data-page="repricing"><span class="ico">£</span>Repricing</button>
+    <button class="nav" data-page="audit"><span class="ico">◌</span>Audit</button>
+  </div>
   <div class="navgroup">
     <div class="navgroup-title">Data & control</div>
     <button class="nav" data-page="import"><span class="ico">⇩</span>eBay Import</button>
     <button class="nav" data-page="sync"><span class="ico">↻</span>Sync & Images</button>
+    <button class="nav" data-page="csv"><span class="ico">▦</span>CSV Reconciliation</button>
+    <button class="nav" data-page="marketplaces"><span class="ico">◇</span>Marketplaces</button>
     <button class="nav" data-page="settings"><span class="ico">⚙</span>Settings</button>
+    <button class="nav" data-page="admin"><span class="ico">♙</span>eBay Admin</button>
     <button class="nav" data-page="log"><span class="ico">▤</span>System Log</button>
   </div>
 </aside>
@@ -249,24 +268,7 @@ const state={
 };
 
 const PAGES={
- dashboard:['Dashboard','eBay Seller Hub · SWISH intelligence layer'],
- listings:['Listings','Create, edit, revise and publish eBay listings'],
- inventory:['Inventory','Canonical stock and listing readiness'],
- orders:['Orders','Fulfilment and customer operations'],
- offers:['Offers','Buyer negotiations and watcher opportunities'],
- messages:['Messages','Buyer communications and response workflow'],
- returns:['Returns','Returns, refunds and deadlines'],
- cases:['Cases','Disputes, INR and SNAD cases'],
- finances:['Finances','Sales, fees, payouts and commercial performance'],
- analytics:['Analytics','Performance and operational intelligence'],
- intelligence:['Command Centre','One screen for what needs attention and what SWISH can do'],
- research:['Research Agent','Natural-language market research and opportunity decomposition'],
- scan:['Coin Scan','Camera-first identification and evidence-backed valuation'],
- calculations:['Calculations','Reusable commercial formulas'],
- import:['eBay Import','CSV reconciliation and controlled import'],
- sync:['Sync & Images','eBay synchronisation and canonical image pipeline'],
- settings:['Settings','Connection, policies and workspace controls'],
- log:['System Log','Diagnostics and backend activity']
+ dashboard:['Dashboard','eBay Seller Hub · SWISH intelligence layer'], listings:['Listings','Create, edit, revise and publish eBay listings'], inventory:['Inventory','Canonical stock and listing readiness'], orders:['Orders','Fulfilment and customer operations'], offers:['Offers','Buyer negotiations and watcher opportunities'], messages:['Messages','Buyer communications and response workflow'], returns:['Returns','Returns, refunds and deadlines'], cases:['Cases','Disputes, INR and SNAD cases'], finances:['Finances','Sales, fees, payouts and commercial performance'], analytics:['Analytics','Performance and operational intelligence'], intelligence:['Command Centre','One screen for what needs attention and what SWISH can do'], research:['Research Agent','Natural-language market research and opportunity decomposition'], scan:['Coin Scan','Camera-first identification and evidence-backed valuation'], islamic:['Islamic Batch ID','Batch identification for Islamic / Indian silver and countermarks'], calculations:['Calculations','Reusable commercial formulas and custom variables'], acquisitions:['Acquisitions','Purchase pipeline, lots, sources and candidate stock'], opportunities:['Opportunities','Commercial opportunities, margins, confidence and evidence'], dispatch:['Dispatch','Orders, packing, tracking and operational handoff'], tasks:['Tasks','Action queue generated by SWISH'], review:['Review Required','Items and listings that need human verification'], repricing:['Repricing','Controlled eBay price changes using saved rules'], audit:['Audit','Activity and decision trail'], csv:['CSV Reconciliation','Compare eBay CSV inventory with SWISH inventory'], marketplaces:['Marketplaces','eBay marketplace connection and capability status'], account:['eBay Account','Seller account, policies and connection status'], money:['Money','Commercial view of revenue, fees, cost and margin'], admin:['eBay Admin','eBay operational controls and policy metadata'], import:['eBay Import','CSV reconciliation and controlled import'], sync:['Sync & Images','eBay synchronisation and canonical image pipeline'], settings:['Settings','Connection, policies and workspace controls'], log:['System Log','Diagnostics and backend activity']
 };
 
 const $=s=>document.querySelector(s);
@@ -367,7 +369,10 @@ function render(){
   dashboard:renderDashboard,listings:renderListings,inventory:renderInventory,orders:renderOrders,
   offers:renderOffers,messages:renderMessages,returns:renderReturns,cases:renderCases,
   finances:renderFinances,analytics:renderAnalytics,intelligence:renderIntelligence,research:renderResearch,
-  scan:renderScan,calculations:renderCalculations,import:renderImport,sync:renderSync,settings:renderSettings,log:renderLog
+  scan:renderScan,islamic:renderIslamic,calculations:renderCalculations,research:renderResearch,
+  acquisitions:renderAcquisitions,opportunities:renderOpportunities,dispatch:renderDispatch,tasks:renderTasks,review:renderReview,repricing:renderRepricing,audit:renderAudit,
+  csv:renderCsv,marketplaces:renderMarketplaces,account:renderAccount,money:renderMoney,admin:renderAdmin,
+  import:renderImport,sync:renderSync,settings:renderSettings,log:renderLog
  };
  $('#view').innerHTML=views[state.page]();
  navBind();
@@ -1125,6 +1130,23 @@ async function publishListing(){
  }catch(e){toast(e.message,'bad')}
 }
 
+
+function genericCard(title,subtitle,items,actions=''){return `<div class="grid2"><div class="card"><div class="section-title"><h2>${esc(title)}</h2><div class="actions">${actions}</div></div><p class="muted smalltext">${esc(subtitle)}</p><div class="list">${items.map(x=>`<div class="rowitem"><span class="pill ${x.tone||''}">${esc(x.tag||'SWISH')}</span><div class="rowmain"><div class="rowtitle">${esc(x.title)}</div><div class="rowsub">${esc(x.sub||'')}</div></div>${x.button?`<button class="btn small" onclick="${x.button}">${esc(x.buttonText||'Open')}</button>`:''}</div>`).join('')}</div></div><div class="card"><h2>Native capability</h2><p class="smalltext muted">Web equivalent of the native SWISH workflow. Existing privileged eBay operations remain behind the existing backend.</p><div class="statline"><span class="statchip">No new database</span><span class="statchip">eBay only</span><span class="statchip">Human approval</span></div></div></div>`}
+function renderAcquisitions(){return genericCard('Acquisitions','Purchase candidates, joblots, auction sources and stock entering SWISH.',[{tag:'PIPELINE',title:'Candidate lots',sub:'Capture source, closing time, location, keywords and estimated contents.'},{tag:'EVIDENCE',title:'Component decomposition',sub:'Use decomposition before treating a lot value as known.',tone:'good'},{tag:'REVIEW',title:'Purchase decision',sub:'Observed prices stay separate from estimates.',tone:'warn'}],'<button class="btn primary" onclick="SWISH.runCommand(\'Open acquisition workflow\')">＋ New acquisition</button>')}
+function renderOpportunities(){return `<div class="card"><div class="section-title"><h2>Commercial Opportunities</h2><button class="btn primary" onclick="SWISH.runCommand('Refresh opportunity engine')">↻ Refresh</button></div><div class="grid4"><div class="metric"><div class="label">Candidates</div><div class="value">—</div><div class="sub">Live data required</div></div><div class="metric"><div class="label">Potential margin</div><div class="value">—</div><div class="sub">Evidence-backed only</div></div><div class="metric"><div class="label">Confidence</div><div class="value">—</div><div class="sub">No invented scores</div></div><div class="metric"><div class="label">Human review</div><div class="value">Required</div><div class="sub">Before purchase</div></div></div><div class="section"><div class="empty">Use Research Agent to generate candidates, then review decomposition and valuation evidence here.</div></div></div>`}
+function renderDispatch(){return genericCard('Dispatch','Operational handoff from paid order to packing and tracking.',[{tag:'ORDERS',title:'Awaiting dispatch',sub:'Pull from the existing eBay order workflow.',button:"SWISH.go('orders')",buttonText:'Open orders'},{tag:'TRACKING',title:'Tracking required',sub:'Keep fulfilment status visible.',tone:'warn'},{tag:'DONE',title:'Dispatched',sub:'Record carrier and tracking where available.',tone:'good'}])}
+function renderTasks(){return genericCard('Tasks','Action queue for things SWISH believes need a human decision.',[{tag:'REVIEW',title:'Listings needing review',sub:'Category, specifics, images, title or valuation confidence.'},{tag:'SYNC',title:'Data needing reconciliation',sub:'eBay vs SWISH mismatches.',tone:'warn'},{tag:'OPS',title:'Operational follow-ups',sub:'Orders, returns, messages and cases.'}])}
+function renderReview(){return genericCard('Review Required','Do not silently publish uncertain identification, category or valuation.',[{tag:'ID',title:'Identification confidence',sub:'Low-confidence attribution stays provisional.',tone:'warn'},{tag:'VALUE',title:'Valuation confidence',sub:'Observed comparable prices stay separate from model estimates.',tone:'warn'},{tag:'LISTING',title:'Listing readiness',sub:'Required category specifics and media must be complete.',tone:'good'}])}
+function renderRepricing(){return genericCard('Repricing','Controlled price changes using the existing SWISH repricing service.',[{tag:'RULES',title:'Saved pricing rules',sub:'Floors, ceilings and quick-sale targets.'},{tag:'RISK',title:'Floor protection',sub:'Never cross the configured floor.',tone:'warn'},{tag:'EBAY',title:'Apply to eBay',sub:'Privileged changes remain server-side.',tone:'good'}],'<button class="btn" onclick="SWISH.runCommand(\'Load repricing candidates\')">Load candidates</button>')}
+function renderAudit(){return `<div class="card"><div class="section-title"><h2>Audit trail</h2><button class="btn small" onclick="SWISH.clearLog()">Clear local view</button></div><p class="muted smalltext">Native audit surface carried into the web app. Local diagnostics are shown here; server-side actions remain handled by existing functions.</p><div class="log">${esc(state.log.join('\\n')||'No events recorded in this browser session.')}</div></div>`}
+function renderCsv(){return `<div class="card"><div class="section-title"><h2>eBay CSV Reconciliation</h2><button class="btn primary" onclick="SWISH.previewCsv()">Choose CSV</button></div><p class="muted smalltext">Compare the complete eBay active-listings CSV with SWISH before importing. This is the reconciliation path for making SWISH match today's eBay inventory.</p><div class="grid3"><div class="card"><b>eBay CSV</b><p class="smalltext muted">Current export</p></div><div class="card"><b>SWISH</b><p class="smalltext muted">Current canonical inventory</p></div><div class="card"><b>Differences</b><p class="smalltext muted">Add / update / missing / conflicting</p></div></div><div id="csvPreview"></div></div>`}
+function renderMarketplaces(){return `<div class="grid2"><div class="card"><h2>eBay UK</h2><p class="muted smalltext">Primary marketplace.</p><div class="statline"><span class="pill good">EBAY_GB</span><span class="statchip">Simple delivery default</span><span class="statchip">Trading API publishing</span></div><button class="btn" onclick="SWISH.go('account')">Account & connection</button></div><div class="card"><h2>Other marketplaces</h2><p class="muted smalltext">Hidden by default because SWISH is currently eBay-focused.</p></div></div>`}
+function renderAccount(){return genericCard('eBay Account','Connection, seller identity and policy state.',[{tag:'CONNECTION',title:'eBay OAuth',sub:'Existing server-side OAuth flow.'},{tag:'POLICIES',title:'Seller policies',sub:'Return, payment and fulfilment metadata where available.'},{tag:'SECURITY',title:'Credentials',sub:'Never expose client secret or refresh token to this browser.',tone:'good'}],'<button class="btn" onclick="SWISH.runCommand(\'Refresh eBay account\')">↻ Refresh</button>')}
+function renderMoney(){return `<div class="card"><h2>Money</h2><p class="muted smalltext">Commercial view across sales, fees, costs and estimated margin.</p><div class="grid4"><div class="metric"><div class="label">Revenue</div><div class="value">—</div></div><div class="metric"><div class="label">eBay fees</div><div class="value">—</div></div><div class="metric"><div class="label">Cost basis</div><div class="value">—</div></div><div class="metric"><div class="label">Gross margin</div><div class="value">—</div></div></div></div>`}
+function renderAdmin(){return genericCard('eBay Admin','Operational controls retained from the native app.',[{tag:'CATEGORY',title:'Live UK taxonomy',sub:'eBay Taxonomy is the authority for leaf categories.',tone:'good',button:"SWISH.go('listings')",buttonText:'Listing editor'},{tag:'SYNC',title:'eBay sync',sub:'Run the existing sync service.',button:"SWISH.sync()",buttonText:'Sync'},{tag:'LOG',title:'Diagnostics',sub:'Inspect browser and backend events.',button:"SWISH.go('log')",buttonText:'Open log'}])}
+function renderIslamic(){return `<div class="grid2"><div class="card"><h2>Islamic / Indian Silver Batch ID</h2><p class="muted smalltext">Batch workflow for dirhams, tankers, half tankers, half dirhams, drachmas and countermarks.</p><label class="btn primary" style="display:inline-block">＋ Add batch images<input id="islamicFilesWeb" type="file" accept="image/*" multiple hidden onchange="SWISH.webIslamicFiles(this)"></label><div id="islamicWebResult" class="section"></div></div><div class="card"><h2>Evidence rules</h2><div class="list"><div class="rowitem"><span class="pill good">IDENTIFY</span><div class="rowmain"><div class="rowtitle">Ranked candidates</div><div class="rowsub">Never force a single attribution when evidence is weak.</div></div></div><div class="rowitem"><span class="pill warn">VALUE</span><div class="rowmain"><div class="rowtitle">Conservative valuation</div><div class="rowsub">Separate metal value, comparable sales and quick-sale value.</div></div></div></div></div></div>`}
+function webIslamicFiles(input){const files=[...(input.files||[])];const out=document.querySelector('#islamicWebResult');out.innerHTML=files.length?`<div class="pill">${files.length} image(s) queued</div><p class="smalltext muted">The native Islamic identification function exists in the source. The web app will only report a result when the backend actually responds.</p><button class="btn primary" onclick="SWISH.runCommand('Run Islamic batch identification')">Run identification</button>`:'<div class="empty">No images selected.</div>'}
+
 function renderOffersShell(){return renderOffers()}
 function renderReturnsShell(){return renderReturns()}
 function renderCasesShell(){return renderCases()}
@@ -1139,7 +1161,7 @@ window.SWISH={
  openMessage,replyMessage,sendReply,runCommand,research,
  previewImage,identifyCoin,islamicScan,calculate,previewCsv,
  openCategories,loadCategories,searchCategories,browseRootCategories,openCategoryNode,chooseLiveCategory,loadAspectsIfNeeded,setAspect,
- addEditorImages,removeEditorImage,clearLog,refreshSettings,
+ addEditorImages,removeEditorImage,clearLog,refreshSettings,webIslamicFiles,
  editor:state.editor
 };
 Object.defineProperty(SWISH,'editor',{get(){return state.editor}});
@@ -1151,153 +1173,6 @@ document.addEventListener('click',e=>{
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal()});
 
 bootstrap();
-
-/* ================================================================
-   SWISH TEMPORARY OFFLINE EBAY UK CATEGORY CACHE
-   Single-user web-app mode: no Supabase / Edge Function required.
-   This cache is sourced from eBay UK's published category-change tree.
-   It is intentionally marked TEMPORARY and is NOT the final live source.
-   Final version will switch back to eBay Taxonomy API when backend access
-   is available. Category IDs below are eBay UK IDs; do not invent IDs.
-================================================================ */
-const SWISH_TEMP_EBAY_GB_CATEGORIES = [
-  // Coins & Paper Money / Ancient & British coins
-  {id:'58520',name:'Coins',path:'Coins',leaf:false},
-  {id:'4733',name:'Ancient',path:'Coins › Ancient',leaf:false},
-  {id:'4738',name:'Greek',path:'Coins › Ancient › Greek',leaf:true},
-  {id:'58519',name:'Roman',path:'Coins › Ancient › Roman',leaf:false},
-  {id:'4734',name:'Roman Republican (c.300-27 BC)',path:'Coins › Ancient › Roman › Roman Republican (c.300-27 BC)',leaf:true},
-  {id:'122471',name:'Roman Imperial (27BC-96AD)',path:'Coins › Ancient › Roman › Roman Imperial (27BC-96AD)',leaf:true},
-  {id:'3365',name:'Roman Imperial (96-235AD)',path:'Coins › Ancient › Roman › Roman Imperial (96-235AD)',leaf:true},
-  {id:'122472',name:'Roman Imperial (235-476AD)',path:'Coins › Ancient › Roman › Roman Imperial (235-476AD)',leaf:true},
-  {id:'4735',name:'Roman Provincial',path:'Coins › Ancient › Roman › Roman Provincial',leaf:true},
-  {id:'131482',name:'Bulk Lots (Cleaned)',path:'Coins › Ancient › Roman › Bulk Lots (Cleaned)',leaf:true},
-  {id:'131483',name:'Bulk Lots (Uncleaned)',path:'Coins › Ancient › Roman › Bulk Lots (Uncleaned)',leaf:true},
-  {id:'3364',name:'Byzantine',path:'Coins › Ancient › Byzantine',leaf:true},
-  {id:'4740',name:'Chinese',path:'Coins › Ancient › Chinese',leaf:true},
-  {id:'4739',name:'Islamic',path:'Coins › Ancient › Islamic',leaf:true},
-  {id:'4737',name:'Persian, Indian',path:'Coins › Ancient › Persian, Indian',leaf:true},
-  {id:'93500',name:'Collections/Bulk Lots',path:'Coins › Ancient › Collections/Bulk Lots',leaf:true},
-  {id:'532',name:'Other Ancient Coins',path:'Coins › Ancient › Other Ancient Coins',leaf:true},
-  {id:'3394',name:'British',path:'Coins › British',leaf:false},
-  {id:'58521',name:'Hammered (Pre-c.1662)',path:'Coins › British › Hammered (Pre-c.1662)',leaf:false},
-  {id:'122475',name:'Celtic Coins (c.100BC-c.100AD)',path:'Coins › British › Hammered (Pre-c.1662) › Celtic Coins (c.100BC-c.100AD)',leaf:true},
-  {id:'58523',name:'Anglo-Saxon Coins (c.600-1066)',path:'Coins › British › Hammered (Pre-c.1662) › Anglo-Saxon Coins (c.600-1066)',leaf:true},
-  {id:'122476',name:'Norman Coins (1066-1154)',path:'Coins › British › Hammered (Pre-c.1662) › Norman Coins (1066-1154)',leaf:true},
-  {id:'47389',name:'Later Medieval (1154-1485)',path:'Coins › British › Hammered (Pre-c.1662) › Later Medieval (1154-1485)',leaf:true},
-  {id:'58524',name:'Tudor Coins (1485-1603)',path:'Coins › British › Hammered (Pre-c.1662) › Tudor Coins (1485-1603)',leaf:true},
-  {id:'122477',name:'Stuart & Commonwealth Coins',path:'Coins › British › Hammered (Pre-c.1662) › Stuart & Commonwealth Coins',leaf:true},
-  {id:'122478',name:'Replica Hammered Coins',path:'Coins › British › Hammered (Pre-c.1662) › Replica Hammered Coins',leaf:true},
-  {id:'58522',name:'Other British Hammered Coins',path:'Coins › British › Hammered (Pre-c.1662) › Other British Hammered Coins',leaf:true},
-  {id:'72366',name:'Early Milled (c.1662-1816)',path:'Coins › British › Early Milled (c.1662-1816)',leaf:false},
-  {id:'72367',name:'Farthing',path:'Coins › British › Early Milled (c.1662-1816) › Farthing',leaf:true},
-  {id:'72368',name:'Half-Penny',path:'Coins › British › Early Milled (c.1662-1816) › Half-Penny',leaf:true},
-  {id:'72369',name:'Penny',path:'Coins › British › Early Milled (c.1662-1816) › Penny',leaf:true},
-  {id:'58528',name:'Twopence',path:'Coins › British › Early Milled (c.1662-1816) › Twopence',leaf:true},
-  {id:'72370',name:'Threepence',path:'Coins › British › Early Milled (c.1662-1816) › Threepence',leaf:true},
-  {id:'72371',name:'Fourpence/Groat',path:'Coins › British › Early Milled (c.1662-1816) › Fourpence/Groat',leaf:true},
-  {id:'72372',name:'Maundy Sets/Coins',path:'Coins › British › Early Milled (c.1662-1816) › Maundy Sets/Coins',leaf:true},
-  {id:'72373',name:'Sixpence',path:'Coins › British › Early Milled (c.1662-1816) › Sixpence',leaf:true},
-  {id:'72374',name:'Shilling',path:'Coins › British › Early Milled (c.1662-1816) › Shilling',leaf:true},
-  {id:'72375',name:'Half-Crown',path:'Coins › British › Early Milled (c.1662-1816) › Half-Crown',leaf:true},
-  {id:'72376',name:'Crown',path:'Coins › British › Early Milled (c.1662-1816) › Crown',leaf:true},
-  {id:'58527',name:'Guinea',path:'Coins › British › Early Milled (c.1662-1816) › Guinea',leaf:true},
-  {id:'101118',name:'Bank of England Issues',path:'Coins › British › Early Milled (c.1662-1816) › Bank of England Issues',leaf:true},
-  {id:'72377',name:'Other Early Milled Coins',path:'Coins › British › Early Milled (c.1662-1816) › Other Early Milled Coins',leaf:true},
-  // Other numismatic categories
-  {id:'58534',name:'Tokens',path:'Tokens',leaf:false},
-  {id:'72383',name:'British',path:'Tokens › British',leaf:false},
-  {id:'72384',name:'17th Century',path:'Tokens › British › 17th Century',leaf:true},
-  {id:'3455',name:'18th Century',path:'Tokens › British › 18th Century',leaf:true},
-  {id:'72385',name:'19th Century',path:'Tokens › British › 19th Century',leaf:true},
-  {id:'72386',name:'20th Century',path:'Tokens › British › 20th Century',leaf:true},
-  {id:'58535',name:'European',path:'Tokens › European',leaf:true},
-  {id:'259',name:'World',path:'Tokens › World',leaf:true},
-  {id:'93503',name:'Collections/Bulk Lots',path:'Tokens › Collections/Bulk Lots',leaf:true},
-  {id:'72378',name:'Historical Medals/Medallions',path:'Historical Medals/Medallions',leaf:false},
-  {id:'141163',name:'British',path:'Historical Medals/Medallions › British',leaf:false},
-  {id:'141164',name:'18th Century',path:'Historical Medals/Medallions › British › 18th Century',leaf:true},
-  {id:'3454',name:'19th Century',path:'Historical Medals/Medallions › British › 19th Century',leaf:true},
-  {id:'141165',name:'20th Century',path:'Historical Medals/Medallions › British › 20th Century',leaf:true},
-  {id:'72379',name:'European',path:'Historical Medals/Medallions › European',leaf:true},
-  {id:'72380',name:'World',path:'Historical Medals/Medallions › World',leaf:true},
-  {id:'93501',name:'Collections/Bulk Lots',path:'Historical Medals/Medallions › Collections/Bulk Lots',leaf:true},
-  // Antiques / collectables commonly used in SWISH
-  {id:'20081',name:'Antiques',path:'Antiques',leaf:false},
-  {id:'1207',name:'Other Antiques',path:'Antiques › Other Antiques',leaf:true},
-  {id:'550',name:'Art',path:'Art',leaf:false},
-  {id:'551',name:'Paintings',path:'Art › Paintings',leaf:true},
-  {id:'552',name:'Art Drawings',path:'Art › Art Drawings',leaf:true},
-  {id:'553',name:'Art Sculptures',path:'Art › Art Sculptures',leaf:true},
-  {id:'554',name:'Mixed Media Art & Collage Art',path:'Art › Mixed Media Art & Collage Art',leaf:true},
-  {id:'360',name:'Art Prints',path:'Art › Art Prints',leaf:true},
-  {id:'2211',name:'Art Photographs',path:'Art › Art Photographs',leaf:true},
-  {id:'267',name:'Books, Comics & Magazines',path:'Books, Comics & Magazines',leaf:false},
-  {id:'29223',name:'Antiquarian & Collectable',path:'Books, Comics & Magazines › Antiquarian & Collectable',leaf:true},
-  {id:'261186',name:'Books',path:'Books, Comics & Magazines › Books',leaf:true},
-  {id:'63',name:'Comic Books & Memorabilia',path:'Books, Comics & Magazines › Comic Books & Memorabilia',leaf:false},
-  {id:'259104',name:'Comics & Graphic Novels',path:'Books, Comics & Magazines › Comic Books & Memorabilia › Comics › Comics & Graphic Novels',leaf:true},
-  // Optics / binoculars
-  {id:'28179',name:'Telescopes & Binoculars',path:'Cameras & Photography › Telescopes & Binoculars',leaf:false},
-  {id:'83880',name:'Binoculars & Monoculars',path:'Cameras & Photography › Telescopes & Binoculars › Binoculars & Monoculars',leaf:true},
-  {id:'162485',name:'Binocular Accessories',path:'Cameras & Photography › Telescopes & Binoculars › Binocular Accessories',leaf:true},
-  {id:'74927',name:'Telescopes',path:'Cameras & Photography › Telescopes & Binoculars › Telescopes',leaf:true},
-  {id:'162044',name:'Other Telescopes & Binoculars',path:'Cameras & Photography › Telescopes & Binoculars › Other Telescopes & Binoculars',leaf:true},
-  // Toys & games
-  {id:'220',name:'Toys & Games',path:'Toys & Games',leaf:false},
-  {id:'234',name:'Other Games',path:'Toys & Games › Games › Other Games',leaf:true},
-  {id:'2613',name:'Jigsaws & Puzzles',path:'Toys & Games › Jigsaws & Puzzles',leaf:false},
-  {id:'19183',name:'Jigsaws',path:'Toys & Games › Jigsaws & Puzzles › Jigsaws',leaf:true},
-  {id:'19188',name:'Vintage Puzzles',path:'Toys & Games › Jigsaws & Puzzles › Vintage Puzzles',leaf:true},
-  {id:'1039',name:'Other Toys & Games',path:'Toys & Games › Other Toys & Games',leaf:true}
-];
-
-function swishTempCategoryResults(q){
- const words=(q||'').toLowerCase().split(/[^a-z0-9]+/).filter(w=>w.length>1);
- if(!words.length)return SWISH_TEMP_EBAY_GB_CATEGORIES.filter(x=>x.leaf);
- const scored=SWISH_TEMP_EBAY_GB_CATEGORIES.filter(x=>x.leaf).map(x=>{
-   const hay=(x.name+' '+x.path).toLowerCase();
-   let score=0;
-   for(const w of words){ if(hay.includes(w))score+=hay===w?10:3; }
-   if(/coin|ancient|roman|greek|islamic|silver|dirham|drachm|token|medal/.test(q.toLowerCase()) && /coin|token|medal|greek|roman|islamic|persian|indian|byzantine|british/.test(hay))score+=2;
-   return {...x,score};
- }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));
- return scored.length?scored.slice(0,30):SWISH_TEMP_EBAY_GB_CATEGORIES.filter(x=>x.leaf).slice(0,30);
-}
-
-function categoryHtml(){
- return `<div class="field">
-   <label>eBay UK category (temporary offline cache)</label>
-   <div class="searchbar">
-     <input id="catSearch" placeholder="e.g. ancient silver coin, medal, binoculars, books…" onkeydown="if(event.key==='Enter')SWISH.searchCategories()">
-     <button class="btn primary" onclick="SWISH.searchCategories()">Search Categories</button>
-   </div>
- </div>
- <div id="catNote" class="smalltext" style="margin:8px 0 12px"><span class="pill">TEMPORARY</span> Single-user offline eBay UK category cache. No backend required.</div>
- <div class="category-browser"><div><div class="smalltext muted" style="margin-bottom:6px">eBay UK cached leaf categories</div><div id="catList" class="category-list"><div class="empty">Search for a category.</div></div></div>
- <div><div class="smalltext muted" style="margin-bottom:6px">Selection</div><div id="catSelection" class="card"><b id="catSelectedName">${esc(state.editor?.categoryName||'No category selected')}</b><p class="muted smalltext" id="catSelectedId">Category ID: ${esc(state.editor?.categoryId||'—')}</p><p class="muted smalltext">Temporary cache only. Final live Taxonomy validation will be restored when backend access is available.</p></div></div></div>`;
-}
-function openCategories(){
- openModal('eBay UK category browser',categoryHtml());
- const title=state.editor?.title?.trim()||'';
- if(title){$('#catSearch').value=title;searchCategories();}
-}
-async function browseRootCategories(){searchCategories();}
-async function searchCategories(){
- const q=($('#catSearch')?.value||'').trim();
- const box=$('#catList'),note=$('#catNote');
- const rows=swishTempCategoryResults(q);
- box.innerHTML=rows.map(c=>`<div class="catrow leaf" onclick="SWISH.chooseLiveCategory('${esc(c.id)}','${esc(c.name)}','${esc(c.path)}')"><span><b>${esc(c.name)}</b><small style="display:block;color:var(--muted);margin-top:3px">${esc(c.path)} · eBay UK ID ${esc(c.id)}</small></span><span class="arrow">✓ Leaf</span></div>`).join('');
- note.innerHTML=`<span class="pill">TEMPORARY</span> ${rows.length} cached eBay UK leaf categories. These IDs are from eBay's published UK category structure; live verification is deliberately disabled in offline mode.`;
-}
-async function loadAspectsIfNeeded(){
- const box=document.getElementById('aspects')||document.getElementById('itemAspects');
- if(box)box.innerHTML='<div class="smalltext muted"><span class="pill">TEMPORARY</span> Live eBay item specifics require the backend Taxonomy API. Category ID is saved and will be live-validated when backend access is restored.</div>';
-}
-
-// Expose the offline replacements.
-try{Object.assign(SWISH,{openCategories,browseRootCategories,searchCategories,loadAspectsIfNeeded});}catch(e){}
-
 </script>
 </body>
 </html>
