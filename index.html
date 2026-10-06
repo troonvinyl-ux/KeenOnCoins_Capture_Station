@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111f">
 <title>SWISH — Full Web Seller Intelligence</title>
+<!-- SWISH TV build: synchronized against uploaded code (17). Single-file Fire TV web target. -->
 <style>
 :root{
  --bg:#07111f;--panel:#0d1a2c;--panel2:#10223a;--panel3:#132945;--line:#1d3552;
@@ -129,6 +130,83 @@ tr.clickable:hover{background:#10233a;cursor:pointer}
 @media(max-width:1100px){.grid4{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:repeat(2,1fr)}.grid2,.editor-grid{grid-template-columns:1fr}}
 @media(max-width:760px){
 .sidebar{display:none}.main{margin-left:0;width:100%;padding:14px 12px 78px}.grid4{grid-template-columns:1fr 1fr}.grid3{grid-template-columns:1fr}.fields2,.category-browser,.aspect-grid,.camera-box{grid-template-columns:1fr}.topbar{align-items:flex-start}.heading h1{font-size:23px}.top-actions .desktop{display:none}.mobilebar{position:fixed;display:flex;z-index:30;left:0;right:0;bottom:0;background:#081525;border-top:1px solid var(--line);justify-content:space-around;padding:7px 4px}.mobilebar button{border:0;background:none;color:#9db2ca;font-size:9px}.image-grid{grid-template-columns:repeat(3,1fr)}.modal{padding:8px}.modalbox{max-height:96vh}.modalbody{padding:12px}}
+
+/* ===================== SWISH FIRE TV MODE =====================
+   Generated from the current SWISH web app and aligned with code (17).
+   Designed for Fire OS 8 / Silk Browser / D-pad remote.
+   No camera, microphone or touch input is required.
+================================================================= */
+body.tv-mode{font-size:16px;overflow-x:hidden}
+body.tv-mode .sidebar{width:310px;padding:22px 16px;overflow-y:auto}
+body.tv-mode .brand{font-size:32px;padding:10px 14px 22px}
+body.tv-mode .workspace{font-size:12px;padding:0 14px 14px}
+body.tv-mode .navgroup{margin-top:20px}
+body.tv-mode .navgroup-title{font-size:12px;margin:0 14px 8px}
+body.tv-mode .nav{font-size:16px;min-height:52px;padding:12px 14px;border:2px solid transparent;gap:12px}
+body.tv-mode .nav .ico{width:24px;font-size:19px}
+body.tv-mode .nav .badge{font-size:11px}
+body.tv-mode .main{margin-left:310px;width:calc(100% - 310px);max-width:none;padding:28px 34px 48px}
+body.tv-mode .topbar{margin-bottom:24px}
+body.tv-mode .heading h1{font-size:36px}
+body.tv-mode .heading p{font-size:15px}
+body.tv-mode .top-actions .btn{font-size:15px;padding:12px 16px}
+body.tv-mode .connection{font-size:14px;padding:12px 15px}
+body.tv-mode .grid4{gap:18px}
+body.tv-mode .grid3{gap:18px}
+body.tv-mode .grid2{gap:18px}
+body.tv-mode .card{padding:20px;border-radius:18px}
+body.tv-mode .metric .label{font-size:14px}
+body.tv-mode .metric .value{font-size:36px}
+body.tv-mode .metric .sub{font-size:13px}
+body.tv-mode .section-title h2{font-size:20px}
+body.tv-mode .smalltext{font-size:14px}
+body.tv-mode .btn{font-size:15px;padding:12px 16px;min-height:46px}
+body.tv-mode .btn.small{font-size:14px;padding:9px 13px;min-height:42px}
+body.tv-mode input,body.tv-mode textarea,body.tv-mode select{font-size:16px;padding:13px 14px;min-height:48px}
+body.tv-mode label{font-size:13px}
+body.tv-mode th{font-size:11px}
+body.tv-mode td{font-size:14px;padding:13px 10px}
+body.tv-mode .rowitem{min-height:72px;padding:13px}
+body.tv-mode .thumb{width:64px;height:64px}
+body.tv-mode .rowtitle{font-size:16px}
+body.tv-mode .rowsub{font-size:13px}
+body.tv-mode .pill{font-size:12px;padding:6px 9px}
+body.tv-mode .modal{padding:24px}
+body.tv-mode .modalbox{max-width:1200px;max-height:90vh}
+body.tv-mode .modalhead{padding:18px 22px}
+body.tv-mode .modalhead h2{font-size:24px}
+body.tv-mode .modalbody{padding:22px}
+body.tv-mode .mobilebar{display:none!important}
+
+/* Strong, unambiguous remote focus. */
+body.tv-mode :focus{outline:none}
+body.tv-mode .tv-focus{
+  outline:4px solid var(--accent2)!important;
+  outline-offset:3px!important;
+  box-shadow:0 0 0 7px rgba(124,165,255,.18),0 8px 28px rgba(0,0,0,.35)!important;
+  position:relative;
+  z-index:5;
+}
+body.tv-mode button.tv-focus,body.tv-mode .nav.tv-focus{background:#1c3d68}
+body.tv-mode .nav.active.tv-focus{background:#245087}
+body.tv-mode .rowitem.tv-focus{background:#122d4d;border-color:var(--accent2)}
+body.tv-mode input.tv-focus,body.tv-mode select.tv-focus,body.tv-mode textarea.tv-focus{border-color:var(--accent2)!important}
+body.tv-mode .tv-help{
+  position:fixed;right:22px;bottom:18px;z-index:40;
+  background:rgba(8,21,37,.94);border:1px solid var(--line);
+  border-radius:12px;padding:8px 12px;color:#9db2ca;font-size:12px;
+  pointer-events:none
+}
+body.tv-mode .tv-mode-badge{
+  display:inline-flex;align-items:center;gap:7px;
+  border:1px solid #294b70;background:#102640;color:#bcd0ea;
+  border-radius:999px;padding:7px 10px;font-size:12px;font-weight:800;
+}
+body.tv-mode .tv-mode-badge i{width:8px;height:8px;border-radius:50%;background:var(--good);display:inline-block}
+@media(max-width:1100px){
+ body.tv-mode .sidebar{width:280px}
+ body.tv-mode .main{margin-left:280px;width:calc(100% - 280px);padding:22px}
+}
 </style>
 </head>
 <body>
@@ -200,7 +278,7 @@ tr.clickable:hover{background:#10233a;cursor:pointer}
     <div class="top-actions">
       <button class="btn primary desktop" onclick="SWISH.newListing()">＋ New listing</button>
       <button class="btn desktop" onclick="SWISH.sync()">↻ Sync</button>
-      <div class="connection"><i class="dot" id="statusDot"></i><span id="statusText">Checking…</span></div>
+      <div class="connection"><i class="dot" id="statusDot"></i><span id="statusText">Checking…</span></div><span class="tv-mode-badge" title="Fire TV mode"><i></i> TV MODE</span>
     </div>
   </div>
   <div id="view"></div>
@@ -1399,5 +1477,266 @@ window.SWISH.chooseLiveCategory=swishLocalChooseCategory;
 window.SWISH.loadAspectsIfNeeded=swishLocalLoadAspects;
 
 </script>
+
+<script>
+/* ================= SWISH FIRE TV CONTROL LAYER ================= */
+(function(){
+  const TV={
+    focusables: [],
+    index: 0,
+    enabled: true,
+    lastPage: 'dashboard',
+    modalWasOpen: false
+  };
+
+  function isForm(el){
+    return el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+  }
+  function visible(el){
+    if(!el) return false;
+    const s=getComputedStyle(el);
+    return s.display!=='none' && s.visibility!=='hidden' && el.getClientRects().length>0;
+  }
+  function refreshFocusables(){
+    TV.focusables=[...document.querySelectorAll(
+      'button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[role="button"],[onclick]'
+    )].filter(visible);
+    // Remove duplicate nested controls and hidden mobile navigation.
+    TV.focusables=TV.focusables.filter(el=>!el.closest('.mobilebar'));
+    if(!TV.focusables.length)return;
+    const active=document.activeElement;
+    let i=TV.focusables.indexOf(active);
+    if(i<0){
+      const nav=document.querySelector('.nav.active');
+      i=nav?TV.focusables.indexOf(nav):0;
+    }
+    TV.index=Math.max(0,i);
+    applyFocus(false);
+  }
+  function applyFocus(doScroll=true){
+    TV.focusables.forEach(e=>e.classList.remove('tv-focus'));
+    const el=TV.focusables[TV.index];
+    if(!el)return;
+    el.classList.add('tv-focus');
+    if(doScroll) el.scrollIntoView({block:'nearest',inline:'nearest'});
+  }
+  function centre(el){
+    const r=el.getBoundingClientRect();
+    return {x:r.left+r.width/2,y:r.top+r.height/2};
+  }
+  function moveSpatial(dx,dy){
+    if(!TV.focusables.length)refreshFocusables();
+    const cur=TV.focusables[TV.index];
+    if(!cur)return;
+    if(isForm(cur) && (cur.tagName==='INPUT'||cur.tagName==='TEXTAREA') && dx!==0){
+      // Let horizontal arrows work normally inside text fields.
+      return;
+    }
+    const c=centre(cur), candidates=[];
+    TV.focusables.forEach((el,i)=>{
+      if(i===TV.index)return;
+      const r=el.getBoundingClientRect();
+      if(r.width<1||r.height<1)return;
+      const p=centre(el), vx=p.x-c.x, vy=p.y-c.y;
+      const primary=dx!==0?vx*dx:vy*dy;
+      const cross=dx!==0?Math.abs(vy):Math.abs(vx);
+      if(primary<=8)return;
+      const distance=Math.hypot(vx,vy);
+      candidates.push({i,score:primary*0.7+cross*1.8+distance*0.15});
+    });
+    candidates.sort((a,b)=>a.score-b.score);
+    if(candidates.length){
+      TV.index=candidates[0].i;
+      applyFocus(true);
+    }
+  }
+  function activate(){
+    const el=TV.focusables[TV.index];
+    if(!el)return;
+    if(isForm(el)){el.focus();return;}
+    el.click();
+    setTimeout(refreshFocusables,80);
+  }
+  function isModalOpen(){
+    const m=document.querySelector('#modal');
+    return !!m && !m.classList.contains('hidden');
+  }
+
+  function keyHandler(e){
+    if(!TV.enabled)return;
+    const key=e.key;
+    // Do not interfere with normal text entry.
+    if(isForm(document.activeElement) && document.activeElement!==document.body){
+      if(key==='Escape'){
+        document.activeElement.blur();
+        refreshFocusables();
+        e.preventDefault();
+      } else if(key==='Enter' && document.activeElement.tagName==='INPUT'){
+        // Existing onkeydown handlers still receive Enter.
+        return;
+      } else if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(key)){
+        // Up/down leave fields; left/right remain inside the field.
+        if(key==='ArrowLeft'||key==='ArrowRight') return;
+      }
+    }
+    if(key==='ArrowLeft'){moveSpatial(-1,0);e.preventDefault();return;}
+    if(key==='ArrowRight'){moveSpatial(1,0);e.preventDefault();return;}
+    if(key==='ArrowUp'){moveSpatial(0,-1);e.preventDefault();return;}
+    if(key==='ArrowDown'){moveSpatial(0,1);e.preventDefault();return;}
+    if(key==='Enter'||key===' '){activate();e.preventDefault();return;}
+    if(key==='Escape'||key==='BrowserBack'){
+      if(isModalOpen()){
+        if(typeof window.SWISH?.closeModal==='function')window.SWISH.closeModal();
+        setTimeout(refreshFocusables,50);
+        e.preventDefault();
+      }else if(window.SWISH?.go && TV.lastPage!=='dashboard'){
+        window.SWISH.go('dashboard');
+        setTimeout(refreshFocusables,100);
+        e.preventDefault();
+      }
+    }
+  }
+
+  function markPage(){
+    const active=document.querySelector('.nav.active');
+    if(active && active.dataset.page)TV.lastPage=active.dataset.page;
+  }
+
+  // Patch navigation so focus is rebuilt after every SWISH render.
+  const bootPatch=setInterval(()=>{
+    if(window.SWISH && typeof window.SWISH.go==='function'){
+      clearInterval(bootPatch);
+      const originalGo=window.SWISH.go;
+      window.SWISH.go=function(page){
+        originalGo.apply(this,arguments);
+        TV.lastPage=page;
+        setTimeout(refreshFocusables,120);
+      };
+      document.addEventListener('keydown',keyHandler,true);
+      document.body.classList.add('tv-mode');
+      const help=document.createElement('div');
+      help.className='tv-help';
+      help.textContent='Remote: ↑ ↓ ← →  Select: OK  Back: Back';
+      document.body.appendChild(help);
+      setTimeout(refreshFocusables,250);
+      const observer=new MutationObserver(()=>setTimeout(refreshFocusables,40));
+      observer.observe(document.getElementById('view')||document.body,{childList:true,subtree:true});
+    }
+  },50);
+})();
+
+/* ================= CODE (17) CATEGORY ALIGNMENT =================
+   code (17) uses swish-ebay-category first and swish-ebay-list only as
+   a compatibility fallback. Do not silently present stale hard-coded IDs.
+================================================================= */
+(function(){
+  async function tvLoadCategories(parentId=''){
+    const box=document.querySelector('#catList'), note=document.querySelector('#catNote');
+    if(!box || !state.tenant) return;
+    box.innerHTML='<div class="empty">Loading eBay Taxonomy…</div>';
+    if(note) note.innerHTML='<span class="pill">LIVE</span> Querying the server-side eBay Taxonomy integration.';
+    try{
+      let data=null, err=null;
+      try{
+        data=await fn('swish-ebay-category',{route:'get_category_children',tenantId:state.tenant.id,parentId});
+      }catch(e){
+        err=e;
+        data=await fn('swish-ebay-list',{route:'get_category_children',tenantId:state.tenant.id,parentId});
+      }
+      if(!data?.success) throw new Error(data?.error||err?.message||'eBay category service unavailable');
+      const rows=(data.children||[]);
+      box.innerHTML=rows.length ? rows.map(c=>{
+        const id=esc(c.id||c.categoryId||'');
+        const name=esc(c.name||c.categoryName||'');
+        const leaf=!!(c.isLeaf??c.leaf);
+        const path=esc(c.path||name);
+        return `<div class="catrow ${leaf?'leaf':''}" tabindex="0"
+          onclick="SWISH.chooseLiveCategory('${id}','${name}','${path}')">
+          <span><b>${name}</b><small style="display:block;color:var(--muted);margin-top:3px">${path} · eBay UK ID ${id}</small></span>
+          <span class="arrow">${leaf?'✓ Leaf':'›'}</span>
+        </div>`;
+      }).join(''):'<div class="empty">No categories returned.</div>';
+      if(note) note.innerHTML=`<span class="pill good">LIVE eBay Taxonomy</span> ${rows.length} categories returned${data.source?` · ${esc(data.source)}`:''}`;
+      setTimeout(()=>window.dispatchEvent(new Event('resize')),30);
+    }catch(e){
+      box.innerHTML='<div class="empty">eBay Taxonomy unavailable: '+esc(e.message)+'</div>';
+      if(note) note.innerHTML='<span class="pill warn">UNAVAILABLE</span> No category has been invented or silently substituted.';
+    }
+  }
+  window.__SWISH_TV_LIVE_CATEGORIES__=tvLoadCategories;
+})();
+</script>
+
+
+<script>
+/* Replace legacy cached-category browser with the code (17) live-first browser. */
+(function(){
+  function openLive(){
+    if(typeof openModal!=='function')return;
+    openModal('Live eBay UK category browser',`
+      <div class="field">
+        <label>Search / browse live eBay UK categories</label>
+        <div class="searchbar">
+          <input id="catSearch" placeholder="e.g. ancient silver coin, medal, binoculars…">
+          <button class="btn primary" id="tvCatSearch">Search LIVE eBay</button>
+          <button class="btn ghost" id="tvCatRoot">Browse root</button>
+        </div>
+      </div>
+      <div id="catNote" class="smalltext muted" style="margin:8px 0 12px">
+        <span class="pill">LIVE</span> eBay Taxonomy is the authority.
+      </div>
+      <div class="category-browser">
+        <div>
+          <div class="smalltext muted" style="margin-bottom:6px">eBay Taxonomy results</div>
+          <div id="catList" class="category-list"><div class="empty">Loading…</div></div>
+        </div>
+        <div>
+          <div class="smalltext muted" style="margin-bottom:6px">Selection</div>
+          <div id="catSelection" class="card">
+            <b id="catSelectedName">${esc(state.editor?.categoryName||'No category selected')}</b>
+            <p class="muted smalltext" id="catSelectedId">Category ID: ${esc(state.editor?.categoryId||'—')}</p>
+            <p class="muted smalltext">Only server-verified eBay category IDs are accepted.</p>
+          </div>
+        </div>
+      </div>`);
+    const load=(parent='')=>window.__SWISH_TV_LIVE_CATEGORIES__?.(parent);
+    document.getElementById('tvCatRoot')?.addEventListener('click',()=>load(''));
+    document.getElementById('tvCatSearch')?.addEventListener('click',()=>{
+      const q=(document.getElementById('catSearch')?.value||'').trim();
+      // Use the existing server search route when available; never fabricate a result.
+      (async()=>{
+        const box=document.getElementById('catList'),note=document.getElementById('catNote');
+        box.innerHTML='<div class="empty">Searching eBay Taxonomy…</div>';
+        try{
+          let data;
+          try{ data=await fn('swish-ebay-category',{route:'get_category_suggestions',tenantId:state.tenant.id,query:q}); }
+          catch(e){ data=await fn('swish-ebay-list',{route:'get_category_suggestions',tenantId:state.tenant.id,query:q}); }
+          if(!data?.success)throw new Error(data?.error||'Category search failed');
+          const rows=data.categories||data.suggestions||data.children||[];
+          box.innerHTML=rows.length?rows.map(c=>{
+            const id=esc(c.id||c.categoryId||'');
+            const name=esc(c.name||c.categoryName||'');
+            const path=esc(c.path||name);
+            const leaf=!!(c.isLeaf??c.leaf);
+            return `<div class="catrow ${leaf?'leaf':''}" tabindex="0" onclick="SWISH.chooseLiveCategory('${id}','${name}','${path}')"><span><b>${name}</b><small style="display:block;color:var(--muted);margin-top:3px">${path} · eBay UK ID ${id}</small></span><span class="arrow">${leaf?'✓ Leaf':'›'}</span></div>`;
+          }).join(''):'<div class="empty">No verified eBay categories matched.</div>';
+          note.innerHTML='<span class="pill good">LIVE</span> Search results returned by the SWISH eBay category service.';
+        }catch(e){
+          box.innerHTML='<div class="empty">'+esc(e.message)+'</div>';
+          note.innerHTML='<span class="pill warn">NO FALLBACK</span> No hard-coded category has been substituted.';
+        }
+      })();
+    });
+    load('');
+  }
+  const wait=setInterval(()=>{
+    if(window.SWISH && typeof window.SWISH==='object'){
+      clearInterval(wait);
+      window.SWISH.openCategories=openLive;
+    }
+  },50);
+})();
+</script>
+
 </body>
 </html>
