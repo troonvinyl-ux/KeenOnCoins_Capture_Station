@@ -280,7 +280,7 @@ async function reValue(itemId){
   const v=d?.valuation||d?.result||{}, price=Number(v.recommendedListingPrice??v.recommended_listing_price??v.valuationMid??v.valuation_mid??0);
   const updates={valuation_low:Number(v.valuationLow??v.valuation_low??0),valuation_mid:Number(v.valuationMid??v.valuation_mid??0),valuation_high:Number(v.valuationHigh??v.valuation_high??0),valuation_confidence:v.valuationConfidence||v.valuation_confidence||'insufficient_data',expected_selling_price:price,expected_net:price*.8725,expected_profit:price*.8725-Number(item.acquired_cost||0),sale_prob_30d:v.saleProb30d??v.sale_prob_30d??null,updated_at:new Date().toISOString()};
   await rest('items',{id:'eq.'+item.id,tenant_id:'eq.'+tid},'PATCH',updates);
-  if(out)out.innerHTML='<div class="success"><b>Re-value complete.</b><p>${price>0?money(price)+' recommended listing price':'No automatic price — insufficient verified market evidence'}</p><pre>'+esc(JSON.stringify(d,null,2))+'</pre></div>';
+  if(out)out.innerHTML='<div class="success"><b>Re-value complete.</b><p>'+(price>0?money(price)+' recommended listing price':'No automatic price — insufficient verified market evidence')+'</p><pre>'+esc(JSON.stringify(d,null,2))+'</pre></div>';
  }catch(e){if(out)out.innerHTML='<div class="error">'+esc(e.message)+'</div>'}
 }
 function listings(){
