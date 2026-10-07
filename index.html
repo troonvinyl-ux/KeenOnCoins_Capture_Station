@@ -226,7 +226,7 @@ async function reIdentify(itemId){
   const item=(await rest('items',{select:'*',id:'eq.'+itemId,tenant_id:'eq.'+state.tenant.id,limit:1}))[0];
   const urls=(Array.isArray(item.media)?item.media:[]).filter(u=>/^https:\/\//i.test(u));
   if(!urls.length)throw new Error('This inventory item has no stored images to re-identify.');
-  const d=await fn(FN.identify,{tenantId:state.tenant.id,existingImageUrls:urls,specialistId:item.specialist_id||'curiosities_collectibles',knownAttributes:item.attributes||{}});
+  const d=await fn(FN.identify,{tenantId:state.tenant.id,tenant_id:state.tenant.id,itemId:item.id,item_id:item.id,existingImageUrls:urls,specialistId:item.specialist_id||'curiosities_collectibles',knownAttributes:item.attributes||{}});
   const ident=d.identification||{};
   const updates={
    canonical_title:ident.canonicalTitle||ident.title||item.canonical_title,
@@ -244,7 +244,7 @@ async function islamicIdentify(itemId){
  try{
   const item=(await rest('items',{select:'*',id:'eq.'+itemId,tenant_id:'eq.'+state.tenant.id,limit:1}))[0];
   const urls=(Array.isArray(item.media)?item.media:[]).filter(u=>/^https:\/\//i.test(u));
-  const d=await fn(FN.islamic,{tenantId:state.tenant.id,itemId:item.id,existingImageUrls:urls,knownAttributes:item.attributes||{}});
+  const d=await fn(FN.islamic,{tenantId:state.tenant.id,tenant_id:state.tenant.id,itemId:item.id,item_id:item.id,existingImageUrls:urls,knownAttributes:item.attributes||{}});
   if(out)out.innerHTML='<div class="success"><b>Islamic identification complete.</b><pre>'+esc(JSON.stringify(d,null,2))+'</pre></div>';
  }catch(e){if(out)out.innerHTML='<div class="error">'+esc(e.message)+'</div>'}
 }
@@ -252,7 +252,7 @@ async function reValue(itemId){
  const out=$('#itemMsg');if(out)out.innerHTML='<div class="empty">Running SWISH valuation engine…</div>';
  try{
   const item=(await rest('items',{select:'*',id:'eq.'+itemId,tenant_id:'eq.'+state.tenant.id,limit:1}))[0], attrs=item.attributes||{};
-  const d=await fn(FN.marketValue,{tenantId:state.tenant.id,itemId:item.id,title:item.canonical_title||'Unknown item',specialistId:item.specialist_id||'curiosities_collectibles',attributes:{...attrs},condition:item.condition||'',identificationConfidence:Number(item.identification_confidence??0),identificationTier:item.identification_confidence>=.85?'high':item.identification_confidence>=.65?'medium':'low',numistaTypeId:attrs.numista_type_id?Number(attrs.numista_type_id):(attrs.numista_candidate_id?Number(attrs.numista_candidate_id):null),numistaMatchScore:Number(attrs.numista_match_score||0),numistaMatchTier:attrs.numista_status||'no_match',applyToItem:false});
+  const d=await fn(FN.marketValue,{tenantId:state.tenant.id,tenant_id:state.tenant.id,itemId:item.id,item_id:item.id,title:item.canonical_title||'Unknown item',specialistId:item.specialist_id||'curiosities_collectibles',attributes:{...attrs},condition:item.condition||'',identificationConfidence:Number(item.identification_confidence??0),identificationTier:item.identification_confidence>=.85?'high':item.identification_confidence>=.65?'medium':'low',numistaTypeId:attrs.numista_type_id?Number(attrs.numista_type_id):(attrs.numista_candidate_id?Number(attrs.numista_candidate_id):null),numistaMatchScore:Number(attrs.numista_match_score||0),numistaMatchTier:attrs.numista_status||'no_match',applyToItem:false});
   const v=d.valuation||{}, price=Number(v.recommendedListingPrice??v.valuationMid??0);
   const updates={valuation_low:Number(v.valuationLow??0),valuation_mid:Number(v.valuationMid??0),valuation_high:Number(v.valuationHigh??0),valuation_confidence:v.valuationConfidence||'insufficient_data',expected_selling_price:price,expected_net:price*.8725,expected_profit:price*.8725-Number(item.acquired_cost||0),sale_prob_30d:v.saleProb30d??null,updated_at:new Date().toISOString()};
   await rest('items',{id:'eq.'+item.id,tenant_id:'eq.'+state.tenant.id},'PATCH',updates);
@@ -330,9 +330,9 @@ async function runEngine(name){
   if(!item)throw new Error('Item not found');
   const urls=(Array.isArray(item.media)?item.media:[]).filter(u=>/^https:\/\//i.test(u));
   let d;
-  if(name===FN.identify)d=await fn(name,{tenantId:state.tenant.id,existingImageUrls:urls,specialistId:item.specialist_id||'curiosities_collectibles',knownAttributes:item.attributes||{}});
-  else if(name===FN.islamic)d=await fn(name,{tenantId:state.tenant.id,itemId:item.id,existingImageUrls:urls,knownAttributes:item.attributes||{}});
-  else d=await fn(name,{tenantId:state.tenant.id,itemId:item.id,title:item.canonical_title||'Unknown item',specialistId:item.specialist_id||'curiosities_collectibles',attributes:item.attributes||{},condition:item.condition||'',identificationConfidence:Number(item.identification_confidence??0),identificationTier:item.identification_confidence>=.85?'high':item.identification_confidence>=.65?'medium':'low',numistaTypeId:item.attributes?.numista_type_id?Number(item.attributes.numista_type_id):null,numistaMatchScore:Number(item.attributes?.numista_match_score||0),numistaMatchTier:item.attributes?.numista_status||'no_match',applyToItem:false});
+  if(name===FN.identify)d=await fn(name,{tenantId:state.tenant.id,tenant_id:state.tenant.id,itemId:item.id,item_id:item.id,existingImageUrls:urls,specialistId:item.specialist_id||'curiosities_collectibles',knownAttributes:item.attributes||{}});
+  else if(name===FN.islamic)d=await fn(name,{tenantId:state.tenant.id,tenant_id:state.tenant.id,itemId:item.id,item_id:item.id,existingImageUrls:urls,knownAttributes:item.attributes||{}});
+  else d=await fn(name,{tenantId:state.tenant.id,tenant_id:state.tenant.id,itemId:item.id,item_id:item.id,title:item.canonical_title||'Unknown item',specialistId:item.specialist_id||'curiosities_collectibles',attributes:item.attributes||{},condition:item.condition||'',identificationConfidence:Number(item.identification_confidence??0),identificationTier:item.identification_confidence>=.85?'high':item.identification_confidence>=.65?'medium':'low',numistaTypeId:item.attributes?.numista_type_id?Number(item.attributes.numista_type_id):null,numistaMatchScore:Number(item.attributes?.numista_match_score||0),numistaMatchTier:item.attributes?.numista_status||'no_match',applyToItem:false});
   out.innerHTML='<div class="success"><b>Engine complete</b><pre>'+esc(JSON.stringify(d,null,2))+'</pre></div>';
  }catch(e){out.innerHTML='<div class="error">'+esc(e.message)+'</div>'}
 }
