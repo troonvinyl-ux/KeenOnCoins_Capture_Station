@@ -224,17 +224,25 @@ async function reIdentify(itemId){
  const out=$('#itemMsg'); if(out)out.innerHTML='<div class="empty">Running SWISH identification engine…</div>';
  try{
   const item=(await rest('items',{select:'*',id:'eq.'+itemId,tenant_id:'eq.'+state.tenant.id,limit:1}))[0];
+  if(!item)throw new Error('Inventory item not found.');
   const urls=(Array.isArray(item.media)?item.media:[]).filter(u=>/^https:\/\//i.test(u));
   if(!urls.length)throw new Error('This inventory item has no stored images to re-identify.');
-  const d=await fn(FN.identify,{tenantId:state.tenant.id,tenant_id:state.tenant.id,itemId:item.id,item_id:item.id,existingImageUrls:urls,specialistId:item.specialist_id||'curiosities_collectibles',knownAttributes:item.attributes||{}});
-  const ident=d.identification||{};
+  const tid=state.tenant.id, iid=item.id;
+  const full={tenant_id:tid,item_id:iid,tenantId:tid,itemId:iid,existingImageUrls:urls,specialistId:item.specialist_id||'curiosities_collectibles',knownAttributes:item.attributes||{}};
+  let d;
+  try{d=await fn(FN.identify,full)}
+  catch(first){
+    if(!/item_id and tenant_id are required|tenant_id.*required|item_id.*required/i.test(first.message))throw first;
+    d=await fn(FN.identify,{tenant_id:tid,item_id:iid});
+  }
+  const ident=d?.identification||d?.result||{};
   const updates={
-   canonical_title:ident.canonicalTitle||ident.title||item.canonical_title,
-   identification_confidence:ident.confidence??item.identification_confidence,
+   canonical_title:ident.canonicalTitle||ident.canonical_title||ident.title||item.canonical_title,
+   identification_confidence:ident.confidence??ident.identification_confidence??item.identification_confidence,
    updated_at:new Date().toISOString()
   };
   if(ident.attributes)updates.attributes={...(item.attributes||{}),...ident.attributes};
-  await rest('items',{id:'eq.'+item.id,tenant_id:'eq.'+state.tenant.id},'PATCH',updates);
+  await rest('items',{id:'eq.'+item.id,tenant_id:'eq.'+tid},'PATCH',updates);
   state.selectedItem={...item,...updates};
   if(out)out.innerHTML='<div class="success"><b>Re-ID complete.</b><pre>'+esc(JSON.stringify(d,null,2))+'</pre></div>';
  }catch(e){if(out)out.innerHTML='<div class="error">'+esc(e.message)+'</div>'}
@@ -243,19 +251,35 @@ async function islamicIdentify(itemId){
  const out=$('#itemMsg');if(out)out.innerHTML='<div class="empty">Running Islamic / countermark specialist…</div>';
  try{
   const item=(await rest('items',{select:'*',id:'eq.'+itemId,tenant_id:'eq.'+state.tenant.id,limit:1}))[0];
+  if(!item)throw new Error('Inventory item not found.');
   const urls=(Array.isArray(item.media)?item.media:[]).filter(u=>/^https:\/\//i.test(u));
-  const d=await fn(FN.islamic,{tenantId:state.tenant.id,tenant_id:state.tenant.id,itemId:item.id,item_id:item.id,existingImageUrls:urls,knownAttributes:item.attributes||{}});
+  const tid=state.tenant.id,iid=item.id;
+  const payload={tenant_id:tid,item_id:iid,tenantId:tid,itemId:iid,existingImageUrls:urls,knownAttributes:item.attributes||{}};
+  let d;
+  try{d=await fn(FN.islamic,payload)}
+  catch(first){
+    if(!/item_id and tenant_id are required|tenant_id.*required|item_id.*required/i.test(first.message))throw first;
+    d=await fn(FN.islamic,{tenant_id:tid,item_id:iid});
+  }
   if(out)out.innerHTML='<div class="success"><b>Islamic identification complete.</b><pre>'+esc(JSON.stringify(d,null,2))+'</pre></div>';
  }catch(e){if(out)out.innerHTML='<div class="error">'+esc(e.message)+'</div>'}
 }
 async function reValue(itemId){
  const out=$('#itemMsg');if(out)out.innerHTML='<div class="empty">Running SWISH valuation engine…</div>';
  try{
-  const item=(await rest('items',{select:'*',id:'eq.'+itemId,tenant_id:'eq.'+state.tenant.id,limit:1}))[0], attrs=item.attributes||{};
-  const d=await fn(FN.marketValue,{tenantId:state.tenant.id,tenant_id:state.tenant.id,itemId:item.id,item_id:item.id,title:item.canonical_title||'Unknown item',specialistId:item.specialist_id||'curiosities_collectibles',attributes:{...attrs},condition:item.condition||'',identificationConfidence:Number(item.identification_confidence??0),identificationTier:item.identification_confidence>=.85?'high':item.identification_confidence>=.65?'medium':'low',numistaTypeId:attrs.numista_type_id?Number(attrs.numista_type_id):(attrs.numista_candidate_id?Number(attrs.numista_candidate_id):null),numistaMatchScore:Number(attrs.numista_match_score||0),numistaMatchTier:attrs.numista_status||'no_match',applyToItem:false});
-  const v=d.valuation||{}, price=Number(v.recommendedListingPrice??v.valuationMid??0);
-  const updates={valuation_low:Number(v.valuationLow??0),valuation_mid:Number(v.valuationMid??0),valuation_high:Number(v.valuationHigh??0),valuation_confidence:v.valuationConfidence||'insufficient_data',expected_selling_price:price,expected_net:price*.8725,expected_profit:price*.8725-Number(item.acquired_cost||0),sale_prob_30d:v.saleProb30d??null,updated_at:new Date().toISOString()};
-  await rest('items',{id:'eq.'+item.id,tenant_id:'eq.'+state.tenant.id},'PATCH',updates);
+  const item=(await rest('items',{select:'*',id:'eq.'+itemId,tenant_id:'eq.'+state.tenant.id,limit:1}))[0];
+  if(!item)throw new Error('Inventory item not found.');
+  const attrs=item.attributes||{},tid=state.tenant.id,iid=item.id;
+  const full={tenant_id:tid,item_id:iid,tenantId:tid,itemId:iid,title:item.canonical_title||'Unknown item',specialistId:item.specialist_id||'curiosities_collectibles',attributes:{...attrs},condition:item.condition||'',identificationConfidence:Number(item.identification_confidence??0),identificationTier:item.identification_confidence>=.85?'high':item.identification_confidence>=.65?'medium':'low',numistaTypeId:attrs.numista_type_id?Number(attrs.numista_type_id):(attrs.numista_candidate_id?Number(attrs.numista_candidate_id):null),numistaMatchScore:Number(attrs.numista_match_score||0),numistaMatchTier:attrs.numista_status||'no_match',applyToItem:false};
+  let d;
+  try{d=await fn(FN.marketValue,full)}
+  catch(first){
+    if(!/item_id and tenant_id are required|tenant_id.*required|item_id.*required/i.test(first.message))throw first;
+    d=await fn(FN.marketValue,{tenant_id:tid,item_id:iid});
+  }
+  const v=d?.valuation||d?.result||{}, price=Number(v.recommendedListingPrice??v.recommended_listing_price??v.valuationMid??v.valuation_mid??0);
+  const updates={valuation_low:Number(v.valuationLow??v.valuation_low??0),valuation_mid:Number(v.valuationMid??v.valuation_mid??0),valuation_high:Number(v.valuationHigh??v.valuation_high??0),valuation_confidence:v.valuationConfidence||v.valuation_confidence||'insufficient_data',expected_selling_price:price,expected_net:price*.8725,expected_profit:price*.8725-Number(item.acquired_cost||0),sale_prob_30d:v.saleProb30d??v.sale_prob_30d??null,updated_at:new Date().toISOString()};
+  await rest('items',{id:'eq.'+item.id,tenant_id:'eq.'+tid},'PATCH',updates);
   if(out)out.innerHTML='<div class="success"><b>Re-value complete.</b><p>'+money(price)+' recommended listing price</p><pre>'+esc(JSON.stringify(d,null,2))+'</pre></div>';
  }catch(e){if(out)out.innerHTML='<div class="error">'+esc(e.message)+'</div>'}
 }
@@ -274,9 +298,24 @@ function listingsView(){
 async function loadListings(){
  const box=$('#lst');if(!box)return;
  try{
-  const d=await fn(FN.browse,{route:'list',tenantId:state.tenant.id});
-  const rows=d?.listings||d?.items||d?.data||[];
-  box.innerHTML=rows.length?rows.map(x=>`<div class="row"><div class="grow"><div class="title">${esc(x.title||x.item?.title||'Untitled')}</div><div class="muted">${esc(x.status||'eBay listing')} · ${esc(x.itemId||x.item_id||x.externalListingId||'')}</div></div><div class="price">${x.price?money(x.price):''}</div></div>`).join(''):'<div class="empty">No live listings returned.</div>';
+  /* Do NOT use swish-ebay-browse here: its stats route requires
+     externalListingId. The canonical listings table already contains
+     the seller's synced listing records. */
+  const rows=await rest('listings',{
+    select:'*',
+    tenant_id:'eq.'+state.tenant.id,
+    order:'updated_at.desc',
+    limit:500
+  });
+  const live=rows.filter(x=>!x.status || !/ended|endedoffline|deleted/i.test(String(x.status)));
+  box.innerHTML=live.length?live.map(x=>{
+    const a=x.attributes||{};
+    const ext=x.external_listing_id||x.externalListingId||x.ebay_item_id||a.ebay_item_id||'';
+    return `<div class="row"><div class="grow">
+      <div class="title">${esc(x.title||x.canonical_title||'Untitled listing')}</div>
+      <div class="muted">${esc(x.status||'eBay listing')} · ${esc(ext)}</div>
+    </div><div class="price">${x.price!=null?money(x.price):money(x.listing_price)}</div></div>`;
+  }).join(''):'<div class="empty">No synced eBay listings found. Run Full eBay sync first.</div>';
  }catch(e){box.innerHTML='<div class="error">'+esc(e.message)+'</div>'}
 }
 async function createListing(itemId){
