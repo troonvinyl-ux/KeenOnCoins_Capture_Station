@@ -76,7 +76,10 @@ function render(){
  nav();
  const v=$('#view');
  if(state.page==='dashboard')v.innerHTML=dashboard();
- else if(state.page==='inventory')v.innerHTML=inventory();
+ else if(state.page==='inventory'){
+   v.innerHTML=inventory();
+   setTimeout(()=>loadInventory(),0);
+ }
  else if(state.page==='listings')v.innerHTML=listings();
  else if(state.page==='orders')v.innerHTML=orders();
  else if(state.page==='intelligence')v.innerHTML=intelligence();
