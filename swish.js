@@ -187,7 +187,8 @@ async function render(){
   };
   shell('<div class="empty">Loading…</div>');
   try {
-    await pages[S.page]?.() ?? pageMore();
+    const pageFn = pages[S.page] || pages.more;
+    if (typeof pageFn === 'function') await pageFn();
     if(token!==S.renderToken) return;
   } catch(e){
     if(token!==S.renderToken) return;
