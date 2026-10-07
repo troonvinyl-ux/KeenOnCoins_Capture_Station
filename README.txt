@@ -96,3 +96,9 @@ CATEGORY MANAGER
 The eBay Hub now includes Category Manager. It lists existing SWISH inventory, shows the stored eBay category, allows a category ID/name to be selected from category data already present in the existing SWISH database or entered manually, optionally asks the existing identification AI for a category suggestion, and saves the confirmed category to the existing inventory/eBay listing records.
 
 The supplied frontend deliberately does not claim an eBay-side revision succeeded unless an existing secure backend revision action accepts the request. The supplied backend function list did not contain an eBay category-revision function, so no new Edge Function or credential handling was added.
+
+
+PATCH 2 - 2026-10-07
+The previous category-manager build had a frontend assembly error and could reference optional SWISH tables that are not present in this backend. This upload-ready build is rebuilt from the original supplied GitHub flat files, then adds Category Manager without removing Command Centre or other existing functions. Missing optional tables such as tasks/fees now fail soft instead of breaking the whole page. Inventory button binding is guarded.
+
+Category Manager is under eBay > Category Manager. It reads existing inventory and eBay listing records, lets the user search inventory, and provides an eBay category search hook that tries existing secure backend taxonomy functions if they exist. It never puts eBay credentials in the browser. Saving stores the selected eBay category ID/name in the existing SWISH inventory/listing records. It only reports an eBay-side change if an existing secure revision function actually accepts the request.
