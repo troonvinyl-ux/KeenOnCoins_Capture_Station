@@ -96,8 +96,21 @@ async function loadInventory(){
  const box=$('#inv');if(!box)return;
  try{
   const q=($('#invq')?.value||'').trim();
-  const rows=await rest('items',{select:'id,title,sku,condition,estimated_value,commercial_score,status,created_at',tenant_id:'eq.'+state.tenant.id,...(q?{title:'ilike.*'+q+'*'}:{}),order:'created_at.desc',limit:100});
-  box.innerHTML=rows.length?rows.map(x=>`<div class="row"><div class="grow"><div class="title">${esc(x.title||'Untitled item')}</div><div class="muted">${esc(x.sku||x.id)} · ${esc(x.condition||'Condition unknown')}</div></div><div class="price">${x.estimated_value?'£'+Number(x.estimated_value).toFixed(2):'—'}</div></div>`).join(''):'<div class="empty">No inventory found.</div>';
+  const rows=await rest('items',{select:'id,sku,canonical_title,status,quantity,condition,condition_notes,media,attributes,updated_at',tenant_id:'eq.'+state.tenant.id,...(q?{canonical_title:'ilike.*'+q+'*'}:{}),order:'updated_at.desc',limit:800});
+  box.innerHTML=rows.length?rows.map(x=>{
+    const media=Array.isArray(x.media)?x.media[0]:null;
+    const imgCount=Array.isArray(x.media)?x.media.length:0;
+    const attrs=x.attributes||{};
+    const ready=!!attrs.ebay_category_id&&!!x.canonical_title&&imgCount>0;
+    return `<div class="row">
+      ${media?`<img class="thumb" src="${esc(media)}">`:'<div class="thumb">◎</div>'}
+      <div class="grow">
+        <div class="title">${esc(x.canonical_title||'Untitled item')}</div>
+        <div class="muted">${esc(x.sku||x.id)} · Qty ${x.quantity??1} · ${imgCount} image(s) · ${esc(x.condition||'')}</div>
+      </div>
+      <span class="price">${ready?'READY':'REVIEW'}</span>
+    </div>`;
+  }).join(''):'<div class="empty">No inventory found.</div>';
  }catch(e){box.innerHTML='<div class="error">'+esc(e.message)+'</div>'}
 }
 function listings(){return `<div class="card"><h2>eBay Listings</h2><p class="muted">Uses the existing SWISH eBay listing function and existing connector.</p><div class="toolbar"><button class="btn primary" onclick="loadListings()">Load live listings</button></div><div id="lst"><div class="empty">Press Load live listings.</div></div></div>`}
