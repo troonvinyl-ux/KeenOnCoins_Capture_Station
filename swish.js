@@ -19,8 +19,8 @@ const SWISH = {
     marketValue:'swish-market-value',
     generate:'swish-list-generate',
     ebayAuth:'ebay-auth-url',
-    ebaySync:null,
-    ebayListingsSync:null,
+    ebaySync:'swish-ebay-sync',
+    ebayListingsSync:'swish-ebay-sync',
     ebayOffer:'ebay-offer-action',
     ebayReturn:'ebay-return-action',
     ebayCase:'ebay-case-respond',
@@ -249,7 +249,7 @@ async function pageDashboard(){
       <button class="btn" id="syncImages">Sync images</button>
       <button class="btn" data-go="inventory">Open inventory</button>
     </div><div id="dashMsg"></div></div>`);
-  document.querySelector('#syncEbay').onclick=()=>showBackendUnavailable('dashMsg','Live eBay sync','ebay-sync / ebay-sync-listings');
+  document.querySelector('#syncEbay').onclick=()=>runAction('ebaySync',{tenantId:S.tenant?.id,tenant_id:S.tenant?.id,mode:'full'},'Full eBay sync complete.','dashMsg');
   document.querySelector('#syncImages').onclick=async()=>runAction('image', {tenantId:S.tenant?.id,mode:'all'},'Image sync complete.','dashMsg');
   document.querySelectorAll('[data-go]').forEach(b=>{
     b.onclick=(e)=>{e.preventDefault();e.stopPropagation();go(b.dataset.go);};
@@ -268,10 +268,16 @@ async function pageInventory(){
 }
 async function syncEbayInventory(){
   const box=document.querySelector('#invBox');
-  if(box)box.innerHTML=`<div class="error"><b>Live eBay sync is not available in the existing SWISH backend.</b><br>
-    The backend currently returns HTTP 404 for both <code>ebay-sync-listings</code> and <code>ebay-sync</code>.
-    <p class="muted">CSV import is independent and uses the existing <code>ebay-import-csv</code> function.</p></div>`;
-  return null;
+  if(box)box.innerHTML='<div class="empty"><div class="spinner"></div>Syncing eBay listingsâ¦</div>';
+  try{
+    const d=await edge(SWISH.functions.ebayListingsSync,{tenantId:S.tenant?.id,tenant_id:S.tenant?.id,mode:'listings'});
+    toast('eBay listings sync completed');
+    await loadInventory();
+    return d;
+  }catch(e){
+    if(box)box.innerHTML=`<div class="error"><b>eBay listings sync failed.</b><br>${esc(e.message)}<p class="muted">Called the existing SWISH <code>swish-ebay-sync</code> backend function. No fake inventory was created.</p></div>`;
+    return null;
+  }
 }
 async function loadInventory(){
   const box=document.querySelector('#invBox');if(!box)return;
@@ -443,8 +449,8 @@ async function pageEbay(){
       ${[['ebayListings','Listings'],['categories','Category Manager'],['ebayOrders','Orders'],['messages','Messages'],['offers','Offers'],['returns','Returns'],['cases','Cases'],['finance','Finances'],['analytics','Analytics'],['import','Import / Export'],['logs','Logs']].map(x=>`<button class="btn" data-ebay="${x[0]}">${x[1]}</button>`).join('')}
     </div><div id="ebayMsg"></div></div>`);
   document.querySelector('#ebayConnect').onclick=async()=>{try{const d=await edge(SWISH.functions.ebayAuth,{});if(d?.url)window.open(d.url,'_blank');else toast('No OAuth URL returned',true)}catch(e){toast(e.message,true)}};
-  document.querySelector('#ebaySync').onclick=()=>showBackendUnavailable('ebayMsg','Full eBay sync','ebay-sync');
-  document.querySelector('#ebayListSync').onclick=()=>showBackendUnavailable('ebayMsg','eBay listings sync','ebay-sync-listings');
+  document.querySelector('#ebaySync').onclick=()=>runAction('ebaySync',{tenantId:S.tenant?.id,tenant_id:S.tenant?.id,mode:'full'},'Full eBay sync complete.','ebayMsg');
+  document.querySelector('#ebayListSync').onclick=()=>runAction('ebayListingsSync',{tenantId:S.tenant?.id,tenant_id:S.tenant?.id,mode:'listings'},'eBay listings sync complete.','ebayMsg');
   document.querySelectorAll('[data-ebay]').forEach(b=>b.onclick=()=>ebaySub(b.dataset.ebay));
 }
 function ebaySub(p){S.page='ebay';S.sub=p;renderEbaySub();}
@@ -675,8 +681,9 @@ function ebayImportPayload(type,filename,rows,csvUrl){
     tenantId:S.tenant?.id,
     tenant_id:S.tenant?.id,
     filename,
-    csv_url:csvUrl,
+    csv_url:csvUrl || null,
     rows,
+    csv_rows:rows,
     normalized_rows:rows,
     source:'ebay_active_listings_csv',
     marketplace_id:'EBAY_GB',
@@ -721,12 +728,10 @@ function ebayImportPayload(type,filename,rows,csvUrl){
 /*
  * IMPORTANT:
  * The existing ebay-import-csv Edge Function is the canonical import route.
- * It expects to LOAD the CSV itself. The old GitHub version tried to give
- * it rows only, which caused the backend to return one "Load failed" result
- * for every item.
- *
- * We therefore give the existing function a fetchable DATA URL containing
- * the actual eBay CSV. This avoids the missing "imports" storage bucket.
+ * Different deployed versions of the existing import function may consume
+ * the supplied rows directly or load csv_url. We provide both forms.
+ * The browser never writes directly to inventory and never requires the
+ * missing "imports" storage bucket.
  * No new database, storage bucket or Edge Function is created.
  */
 async function importEbayRowsViaBackend(rows,type,filename,originalCsvText){
@@ -812,7 +817,7 @@ async function bindImport(){
             <div class="${failed ? 'error' : 'success'}">
               <b>eBay import ${failed ? 'returned failures' : 'completed'}.</b>
               <br>${created} created Â· ${updated} updated Â· ${duplicates} duplicates Â· ${failed} failed Â· ${parsed.length} rows read
-              <p class="muted">Backend: existing <code>ebay-import-csv</code> Edge Function.</p>
+              <p class="muted">Existing SWISH backend: <code>ebay-import-csv</code>. Browser-side database writes were not used.</p>
             </div>
             ${stats.failures?.length?`<div class="error" style="margin-top:12px"><b>Backend response</b><pre class="pre">${esc(JSON.stringify(stats.failures.slice(0,20),null,2))}</pre></div>`:''}
             ${categorySummaryHtmlFromRows(parsed.map(x=>({
