@@ -36,9 +36,38 @@ const SWISH = {
   }
 };
 
-const sb = window.supabase.createClient(SWISH.backend, SWISH.anon, {
-  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'swish_github_auth'}
-});
+// Startup-safe Supabase initialisation.
+// Keep the existing SWISH backend and authentication; do not create another backend.
+let sb = null;
+
+function showStartupError(message, detail=''){
+  const app=document.querySelector('#app');
+  if(!app)return;
+  app.innerHTML=`<main class="main"><div class="card login">
+    <div class="brand">S<span>WISH</span></div>
+    <h2>SWISH could not start</h2>
+    <div class="error">${esc(message)}</div>
+    ${detail?`<pre class="pre">${esc(detail)}</pre>`:''}
+    <p class="muted">The existing SWISH backend/database has not been changed. This is a frontend startup error.</p>
+    <button class="btn primary" onclick="location.reload()">Reload</button>
+  </div></main>`;
+}
+
+function ensureSupabase(){
+  if(!window.supabase || typeof window.supabase.createClient!=='function'){
+    showStartupError(
+      'The Supabase-compatible library did not load.',
+      'window.supabase is unavailable. Check the CDN/network connection and reload the page.'
+    );
+    return false;
+  }
+  if(!sb){
+    sb=window.supabase.createClient(SWISH.backend, SWISH.anon,{
+      auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'swish_github_auth'}
+    });
+  }
+  return true;
+}
 
 const S = {
   page: location.hash.replace('#/','') || 'dashboard',
@@ -750,10 +779,21 @@ async function runAction(fnKey,payload,msg,target){
 async function runEdgeToast(fn,payload,msg){try{const d=await edge(fn,payload);toast(msg);return d}catch(e){toast(e.message,true)}}
 
 async function init(){
-  S.page=currentHashPage();
-  const {data:{session}}=await sb.auth.getSession();S.user=session?.user||null;
-  if(!S.user){renderLogin();return;}
-  await loadContext();render();
-  sb.auth.onAuthStateChange(async(_event,session)=>{S.user=session?.user||null;if(!S.user)renderLogin();else{await loadContext();render();}});
+  try{
+    S.page=currentHashPage();
+    if(!ensureSupabase())return;
+    const {data:{session},error}=await sb.auth.getSession();
+    if(error)throw error;
+    S.user=session?.user||null;
+    if(!S.user){renderLogin();return;}
+    await loadContext();render();
+    sb.auth.onAuthStateChange(async(_event,session)=>{
+      S.user=session?.user||null;
+      if(!S.user)renderLogin();
+      else{await loadContext();render();}
+    });
+  }catch(e){
+    showStartupError('SWISH startup failed.',e?.message||String(e));
+  }
 }
 window.addEventListener('load',init);
