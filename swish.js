@@ -1,1393 +1,759 @@
-SWISH eBay CSV IMPORT — READY-TO-PASTE PATCH
-================================================
 
-This patch is designed for:
-troonvinyl-ux/KeenOnCoins_Capture_Station
+/* SWISH GitHub flat web app
+   Existing OnSpace backend is canonical.
+   No new database, no new Edge Functions, no third-party secret keys.
+*/
+const SWISH = {
+  backend: 'https://iwgaqieyoahmcjfziwga.backend.onspace.ai',
+  // This is the existing public Supabase-compatible anon key already used by the supplied SWISH app.
+  // It is NOT an eBay/Gemini/Numista secret.
+  anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3ODkwNjM4MTgsImV4cCI6MjEwNDQyMzgxOCwicmVmIjoiaXdnYXFpZXlvYWhtY2pmeml3Z2EiLCJyb2xlIjoiYW5vbiIsImlzcyI6Im9uc3BhY2UifQ.cioQ38guPLFAbl3x48mUaJcMSxU5IpZn7-H-JhtvXJc',
+  functions: {
+    identify:'identify',
+    value:'value',
+    islamic:'swish-islamic-identify',
+    image:'swish-image-download',
+    reprice:'reprice',
+    repriceAll:'reprice-all',
+    decompose:'swish-decompose',
+    marketValue:'swish-market-value',
+    generate:'swish-list-generate',
+    ebayAuth:'ebay-auth-url',
+    ebaySync:'ebay-sync',
+    ebayListingsSync:'ebay-sync-listings',
+    ebayOffer:'ebay-offer-action',
+    ebayReturn:'ebay-return-action',
+    ebayCase:'ebay-case-respond',
+    ebayReply:'ebay-reply-message',
+    ebayFinance:'ebay-finances',
+    ebayFinanceSummary:'ebay-finances-summary',
+    ebayAnalytics:'ebay-analytics',
+    ebayImport:'ebay-import-csv',
+    ebayExport:'ebay-export-csv',
+    dispatch:'dispatch-order',
+    listingPreflight:'listing-preflight',
+    publishListing:'publish-listing'
+  }
+};
 
-It uses the EXISTING SWISH backend and existing `ebay-import-csv` Edge Function.
-It does NOT create a database, table, authentication system, or new backend.
+const sb = window.supabase.createClient(SWISH.backend, SWISH.anon, {
+  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storageKey:'swish_github_auth'}
+});
 
-The supplied real eBay export contains these 30 columns:
-Item number
-Title
-Variation details
-Custom label (SKU)
-Available quantity
-Format
-Currency
-Start price
-Auction Buy It Now price
-Reserve price
-Current price
-Sold quantity
-Watchers
-Bids
-Start date
-End date
-eBay category 1 name
-eBay category 1 number
-eBay category 2 name
-eBay category 2 number
-Condition
-CD:Professional Grader - (ID: 27501)
-CD:Grade - (ID: 27502)
-CDA:Certification Number - (ID: 27503)
-CD:Card Condition - (ID: 40001)
-eBay Product ID(ePID)
-Listing site
-P:UPC
-P:EAN
-P:ISBN
+const S = {
+  page: location.hash.replace('#/','') || 'dashboard',
+  sub:'overview',
+  user:null,
+  tenant:null,
+  connector:null,
+  selected:null,
+  cache:{},
+  identifyFiles:[],
+  identifyPreviews:[],
+  busy:false,
+  renderToken:0
+};
 
-The supplied file has 206 rows.
+const esc = v => String(v ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const money = v => Number.isFinite(Number(v)) ? 'Â£'+Number(v).toFixed(2) : 'â';
+const date = v => v ? new Date(v).toLocaleDateString('en-GB') : 'â';
+const datetime = v => v ? new Date(v).toLocaleString('en-GB') : 'â';
+const arr = v => Array.isArray(v) ? v : [];
+const obj = v => v && typeof v==='object' ? v : {};
+const toast = (msg, bad=false) => {
+  const old=document.querySelector('.toast'); if(old) old.remove();
+  const el=document.createElement('div'); el.className='toast '+(bad?'error':''); el.textContent=msg;
+  document.body.appendChild(el); setTimeout(()=>el.remove(),4500);
+};
+const setConn = (ok,text) => {
+  const el=document.querySelector('#connection');
+  if(el) el.innerHTML='<span class="dot '+(ok?'good':'')+'"></span>'+esc(text);
+};
 
-IMPORTANT:
-1. Keep the existing SWISH backend/database.
-2. Keep using SWISH.functions.ebayImport = 'ebay-import-csv'.
-3. Do not create another inventory database.
-4. The CSV is an import/update source for existing eBay inventory.
-5. Match existing records by eBay Item number first, then SKU.
-6. Do not create duplicate records when an item already exists.
-7. Do not erase existing SWISH images/descriptions/AI data merely because the CSV does not contain them.
-8. Do not report success until the backend import responds successfully.
-9. Keep eBay credentials server-side.
-10. Keep Simple Delivery for new eBay submissions.
-
-PATCH 1 — REPLACE THE CURRENT `if(S.sub==='import')` BLOCK
-------------------------------------------------------------
-
-Find this existing block inside `renderEbaySub()`:
-
-if(S.sub==='import'){
-  replaceView(base+`<h2>eBay Import / Export</h2><div class="two"><div><select id="impType"><option>listings</option><option>orders</option><option>inventory</option><option>categories</option></select><input id="csvFile" type="file" accept=".csv,.xlsx"><button class="btn primary" id="importCsv">Import</button></div><div><button class="btn" id="exportCsv">Export</button></div></div><div id="ebaySubBox"></div></div>`);
-  return bindImport();
-}
-
-Replace it with:
-
-if(S.sub==='import'){
-  replaceView(base+`
-    <h2>eBay CSV Import</h2>
-    <p class="muted">
-      Import an eBay Active Listings CSV into the existing SWISH inventory.
-      Existing records are matched by eBay Item number or SKU and updated rather than duplicated.
-    </p>
-
-    <div class="card">
-      <div class="toolbar">
-        <input id="csvFile" type="file" accept=".csv,text/csv">
-        <button class="btn primary" id="importCsv">Analyse CSV</button>
-        <button class="btn" id="exportCsv">Export</button>
-      </div>
-
-      <div class="toolbar" style="margin-top:10px">
-        <span class="tag">eBay Active Listings</span>
-        <span class="tag">Existing SWISH database</span>
-        <span class="tag">No duplicate import</span>
-      </div>
-    </div>
-
-    <div id="ebaySubBox">
-      <div class="empty">
-        Select an eBay Active Listings CSV to begin.
-      </div>
-    </div>
-  </div>`);
-  return bindImport();
-}
-
-PATCH 2 — REPLACE THE CURRENT `bindImport()` FUNCTION
--------------------------------------------------------
-
-Replace the entire existing one-line `bindImport()` function with this:
-
-async function bindImport(){
-
-  const box = document.querySelector('#ebaySubBox');
-  const fileInput = document.querySelector('#csvFile');
-  const importBtn = document.querySelector('#importCsv');
-  const exportBtn = document.querySelector('#exportCsv');
-
-  if(!fileInput || !importBtn || !box) return;
-
-  let parsed = null;
-
-  importBtn.onclick = async () => {
-
-    const file = fileInput.files?.[0];
-
-    if(!file){
-      toast('Choose an eBay CSV file first.', true);
-      return;
-    }
-
-    if(!/\.csv$/i.test(file.name)){
-      toast('Please choose an eBay CSV file.', true);
-      return;
-    }
-
-    importBtn.disabled = true;
-    importBtn.textContent = 'Reading CSV…';
-
+async function edge(name,payload={}) {
+  const {data,error}=await sb.functions.invoke(name,{body:payload});
+  if(error){
+    let detail='';
     try{
-
-      const textData = await file.text();
-      parsed = parseEbayCsv(textData);
-
-      if(!parsed.rows.length){
-        throw new Error('The CSV contains no listing rows.');
+      const r=error.context;
+      if(r){
+        const ct=r.headers?.get?.('content-type')||'';
+        if(ct.includes('application/json')){const j=await r.clone().json();detail=j?.error||j?.message||j?.details||JSON.stringify(j);}
+        else detail=await r.clone().text();
       }
+    }catch(_){}
+    const status=error.context?.status?` [HTTP ${error.context.status}]`:'';
+    throw new Error((detail||error.message||String(error))+status);
+  }
+  return data;
+}
 
-      renderEbayCsvPreview(parsed, file);
+async function edgeAny(names,payload={}){
+  let last=null;
+  for(const name of names){
+    try{return await edge(name,payload)}
+    catch(e){last=e}
+  }
+  throw last||new Error('No compatible SWISH Edge Function responded.');
+}
 
-      importBtn.disabled = false;
-      importBtn.textContent = 'Import into SWISH';
+async function table(name,query={}) {
+  let q=sb.from(name).select(query.select||'*');
+  if(query.eq) Object.entries(query.eq).forEach(([k,v])=>q=q.eq(k,v));
+  if(query.ilike) Object.entries(query.ilike).forEach(([k,v])=>q=q.ilike(k,v));
+  if(query.neq) Object.entries(query.neq).forEach(([k,v])=>q=q.neq(k,v));
+  if(query.in) Object.entries(query.in).forEach(([k,v])=>q=q.in(k,v));
+  if(query.order) q=q.order(query.order.column,{ascending:query.order.ascending!==false});
+  if(query.limit) q=q.limit(query.limit);
+  if(query.single) q=q.single();
+  const {data,error}=await q;
+  if(error) throw error;
+  return data;
+}
+async function safeTable(name,query={},fallback=[]){
+  try{return await table(name,query)}catch(e){
+    if(/relation .* does not exist|Could not find the table|schema cache/i.test(String(e.message||e))) return fallback;
+    throw e;
+  }
+}
 
-      importBtn.onclick = async () => {
+async function insert(name,row){ const {data,error}=await sb.from(name).insert(row).select().single(); if(error)throw error; return data; }
+async function update(name,id,patch){ const {data,error}=await sb.from(name).update(patch).eq('id',id).select().single(); if(error)throw error; return data; }
+async function remove(name,id){ const {error}=await sb.from(name).delete().eq('id',id); if(error)throw error; }
 
-        importBtn.disabled = true;
-        importBtn.textContent = 'Importing…';
-
-        const msg = document.querySelector('#csvImportMsg');
-
-        if(msg){
-          msg.innerHTML =
-            '<div class="empty"><div class="spinner"></div>' +
-            '<p>Sending eBay CSV to the existing SWISH backend…</p></div>';
-        }
-
-        try{
-
-          /*
-           * Keep the existing server-side import route.
-           * The browser never receives or handles eBay credentials.
-           */
-
-          let csvUrl = '';
-
-          try{
-
-            const path =
-              `imports/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
-
-            const up = await sb.storage
-              .from('imports')
-              .upload(path, file, {
-                upsert:true,
-                contentType:'text/csv'
-              });
-
-            if(!up.error){
-              csvUrl =
-                sb.storage
-                  .from('imports')
-                  .getPublicUrl(path)
-                  .data
-                  .publicUrl || '';
-            }
-
-          }catch(storageError){
-
-            /*
-             * Do not fail here. The backend can still receive the
-             * parsed rows directly if its import function supports them.
-             */
-            console.warn('CSV storage upload unavailable:', storageError);
-
-          }
-
-          const payload = {
-            type:'listings',
-            filename:file.name,
-
-            tenantId:S.tenant?.id,
-            tenant_id:S.tenant?.id,
-
-            csv_url:csvUrl || null,
-
-            /*
-             * Normalised rows are supplied as well as the original CSV URL.
-             * This allows the existing Edge Function to use either route.
-             */
-            rows:parsed.rows,
-
-            source:'ebay_active_listings_csv',
-
-            mapping:{
-              ebay_item_id:'Item number',
-              title:'Title',
-              sku:'Custom label (SKU)',
-              quantity:'Available quantity',
-              format:'Format',
-              currency:'Currency',
-              start_price:'Start price',
-              buy_it_now_price:'Auction Buy It Now price',
-              current_price:'Current price',
-              sold_quantity:'Sold quantity',
-              watchers:'Watchers',
-              bids:'Bids',
-              start_date:'Start date',
-              end_date:'End date',
-              category_1_name:'eBay category 1 name',
-              category_1_id:'eBay category 1 number',
-              category_2_name:'eBay category 2 name',
-              category_2_id:'eBay category 2 number',
-              condition:'Condition',
-              epid:'eBay Product ID(ePID)',
-              listing_site:'Listing site',
-              upc:'P:UPC',
-              ean:'P:EAN',
-              isbn:'P:ISBN'
-            },
-
-            match_priority:[
-              'ebay_item_id',
-              'sku'
-            ],
-
-            preserve_existing_fields:[
-              'images',
-              'media',
-              'image_urls',
-              'description',
-              'identification_data',
-              'identification_confidence',
-              'attributes',
-              'valuation_low',
-              'valuation_mid',
-              'valuation_high',
-              'valuation_confidence',
-              'expected_selling_price',
-              'expected_profit'
-            ],
-
-            prevent_duplicates:true
-          };
-
-          const result = await edge(
-            SWISH.functions.ebayImport,
-            payload
-          );
-
-          box.innerHTML = `
-            <div class="card">
-              <div class="success">
-                <h3>eBay CSV import completed</h3>
-                <p>
-                  The existing SWISH backend accepted the import.
-                </p>
-              </div>
-
-              <div class="grid">
-                <div class="card metric">
-                  <span class="muted">CSV rows</span>
-                  <b>${parsed.rows.length}</b>
-                </div>
-
-                <div class="card metric">
-                  <span class="muted">eBay Item IDs</span>
-                  <b>${parsed.rows.filter(r=>r.ebay_item_id).length}</b>
-                </div>
-
-                <div class="card metric">
-                  <span class="muted">SKUs</span>
-                  <b>${parsed.rows.filter(r=>r.sku).length}</b>
-                </div>
-
-                <div class="card metric">
-                  <span class="muted">Currency</span>
-                  <b>${esc(parsed.currencies.join(', ') || '—')}</b>
-                </div>
-              </div>
-
-              <details style="margin-top:12px">
-                <summary>Backend response</summary>
-                <pre class="pre">${esc(JSON.stringify(result,null,2))}</pre>
-              </details>
-
-              <div class="toolbar" style="margin-top:12px">
-                <button class="btn primary" id="refreshAfterCsv">Refresh SWISH inventory</button>
-                <button class="btn" id="importAnotherCsv">Import another CSV</button>
-              </div>
-
-              <div id="csvImportMsg"></div>
-            </div>`;
-
-          document.querySelector('#refreshAfterCsv')?.addEventListener('click',()=>{
-            S.sub='ebayListings';
-            renderEbaySub();
-          });
-
-          document.querySelector('#importAnotherCsv')?.addEventListener('click',()=>{
-            S.sub='import';
-            renderEbaySub();
-          });
-
-          toast('eBay CSV imported successfully');
-
-        }catch(e){
-
-          const msg = document.querySelector('#csvImportMsg');
-
-          if(msg){
-            msg.innerHTML =
-              `<div class="error"><b>Import failed.</b><br>${esc(e.message)}</div>`;
-          }
-
-          importBtn.disabled = false;
-          importBtn.textContent = 'Import into SWISH';
-
-          toast(e.message || 'eBay CSV import failed', true);
-        }
-      };
-
-    }catch(e){
-
-      importBtn.disabled = false;
-      importBtn.textContent = 'Analyse CSV';
-
-      box.innerHTML =
-        `<div class="error"><b>CSV could not be read.</b><br>${esc(e.message)}</div>`;
-
-      toast(e.message || 'CSV could not be read', true);
+async function loadContext(){
+  const {data:{user}}=await sb.auth.getUser();
+  S.user=user;
+  if(!user){setConn(false,'Sign in required');return false;}
+  try {
+    const tenants=await table('tenants',{select:'id,name,slug,subscription_tier,settings,created_at',order:{column:'created_at',ascending:true},limit:1});
+    S.tenant=tenants?.[0]||null;
+    if(S.tenant){
+      const c=await table('marketplace_connectors',{select:'*',eq:{tenant_id:S.tenant.id,marketplace_id:'ebay'},limit:1});
+      S.connector=c?.[0]||null;
     }
+    setConn(true,(S.connector?.status||'Connected')+' Â· eBay');
+    return true;
+  } catch(e){ setConn(false,'Backend connected Â· tenant lookup failed'); return true; }
+}
+
+function shell(content){
+  const nav=[
+    ['dashboard','â Home'],['inventory','â« Inventory'],['identify','â Identify'],
+    ['listings','â£ Listings'],['orders','â¤ Orders'],['ebay','eBay'],['more','â¢â¢â¢ More']
+  ];
+  document.querySelector('#app').innerHTML=`
+    <div class="app"><main class="main">
+      <div class="top">
+        <div><div class="brand">S<span>WISH</span></div><div class="status">KeenOnCoins Â· GitHub frontend Â· existing SWISH backend</div></div>
+        <div id="connection" class="conn"><span class="dot"></span>Connectingâ¦</div>
+      </div>
+      <div class="nav">${nav.map(([p,t])=>`<button type="button" class="${S.page===p?'active':''}" data-go="${p}">${t}</button>`).join('')}</div>
+      <div id="view">${content}</div>
+    </main>
+    <div class="bottom"><div class="bottomin">
+      ${nav.slice(0,5).map(([p,t])=>`<button type="button" class="${S.page===p?'active':''}" data-go="${p}">${t}</button>`).join('')}
+    </div></div></div>`;
+  document.querySelectorAll('[data-go]').forEach(b=>{
+    b.onclick=(e)=>{e.preventDefault();e.stopPropagation();go(b.dataset.go);};
+  });
+  setConn(!!S.user,(S.connector?.status||'Connected')+' Â· eBay');
+}
+function go(p){
+  S.page=p;
+  const target='#/'+p;
+  if(location.hash!==target) history.pushState({page:p},'',target);
+  render();
+}
+
+// Global navigation safety net: catches taps on navigation controls even if a page re-rendered them.
+document.addEventListener('click',(e)=>{
+  const el=e.target.closest?.('[data-go],[data-more]');
+  if(!el)return;
+  const p=el.dataset.go||el.dataset.more;
+  if(!p)return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  go(p);
+},true);
+
+function currentHashPage(){
+  const raw=location.hash.replace(/^#\//,'').split('?')[0];
+  return raw||'dashboard';
+}
+
+window.addEventListener('hashchange',()=>{
+  const p=currentHashPage();
+  if(p!==S.page){S.page=p;render();}
+});
+
+async function render(){
+  const token=++S.renderToken;
+  if(!S.user){renderLogin();return;}
+  const pages={
+    dashboard:pageDashboard,inventory:pageInventory,identify:pageIdentify,listings:pageListings,
+    orders:pageOrders,ebay:pageEbay,more:pageMore,
+    acquisitions:pageAcquisitions,opportunities:pageOpportunities,review:pageReview,
+    audit:pageAudit,dispatch:pageDispatch,repricing:pageRepricing,insights:pageInsights,
+    money:pageMoney,tasks:pageTasks,settings:pageSettings,command:pageCommand
   };
-
-  if(exportBtn){
-
-    exportBtn.onclick = async () => {
-
-      try{
-
-        const d = await edge(
-          SWISH.functions.ebayExport,
-          {
-            type:'listings',
-            tenantId:S.tenant?.id,
-            tenant_id:S.tenant?.id
-          }
-        );
-
-        if(d?.url){
-          window.open(d.url,'_blank');
-        }else{
-          toast('Export triggered');
-        }
-
-      }catch(e){
-        toast(e.message,true);
-      }
-    };
-
+  shell('<div class="empty">Loadingâ¦</div>');
+  try {
+    const pageFn = pages[S.page] || pages.more;
+    if (typeof pageFn === 'function') await pageFn();
+    if(token!==S.renderToken) return;
+  } catch(e){
+    if(token!==S.renderToken) return;
+    const v=document.querySelector('#view');
+    if(v) v.innerHTML=`<div class="card"><div class="error">${esc(e.message)}</div></div>`;
   }
 }
+function replaceView(html){
+  const v=document.querySelector('#view');
+  if(v && S.page===currentHashPage()) v.innerHTML=html;
+}
+function tabs(items,active){return `<div class="tabs">${items.map(x=>`<button class="${active===x[0]?'active':''}" data-sub="${x[0]}">${x[1]}</button>`).join('')}</div>`}
+function bindSubs(){document.querySelectorAll('[data-sub]').forEach(b=>b.onclick=()=>{S.sub=b.dataset.sub;render();});}
 
-PATCH 3 — ADD THESE CSV HELPER FUNCTIONS
-------------------------------------------
-
-Place the following functions immediately before `bindImport()`:
-
-function detectCsvDelimiter(text){
-
-  const firstLines = String(text||'')
-    .split(/\r?\n/)
-    .filter(x=>x.trim())
-    .slice(0,5)
-    .join('\n');
-
-  const candidates = [',',';','\t'];
-
-  let best = ',';
-  let bestScore = -1;
-
-  for(const delimiter of candidates){
-
-    let score = 0;
-    let inside = false;
-
-    for(let i=0;i<firstLines.length;i++){
-
-      const ch = firstLines[i];
-
-      if(ch === '"'){
-
-        if(inside && firstLines[i+1] === '"'){
-          i++;
-          continue;
-        }
-
-        inside = !inside;
-        continue;
-      }
-
-      if(!inside && ch === delimiter){
-        score++;
-      }
-    }
-
-    if(score > bestScore){
-      bestScore = score;
-      best = delimiter;
-    }
-  }
-
-  return best;
+function renderLogin(){
+  document.querySelector('#app').innerHTML=`<main class="main"><div class="card login">
+    <div class="brand">S<span>WISH</span></div><p class="muted">Sign in through the existing SWISH backend. No eBay, Gemini or Numista API key is required here.</p>
+    <div class="two"><input id="email" type="email" placeholder="Email"><input id="password" type="password" placeholder="Password"></div>
+    <div class="toolbar" style="margin-top:12px"><button class="btn primary" id="login">Sign in</button></div>
+    <div id="loginErr"></div>
+  </div></main>`;
+  document.querySelector('#login').onclick=async()=>{
+    const er=document.querySelector('#loginErr');er.innerHTML='<div class="empty">Signing inâ¦</div>';
+    const {error}=await sb.auth.signInWithPassword({email:document.querySelector('#email').value,password:document.querySelector('#password').value});
+    if(error)er.innerHTML=`<div class="error">${esc(error.message)}</div>`;else{await loadContext();render();}
+  };
 }
 
+async function pageDashboard(){
+  const [inv,ebayListings,orders,tasks]=await Promise.all([
+    safeTable('inventory',{limit:1000}),safeTable('ebay_listings',{limit:1000}),safeTable('orders',{limit:500}),safeTable('tasks',{limit:500})
+  ]);
+  const inventoryCount=inv.length||ebayListings.length;
+  const awaiting=orders.filter(x=>['awaiting_dispatch','paid','processing'].includes(String(x.status)));
+  const openTasks=tasks.filter(x=>x.status!=='completed');
+  replaceView(`<div class="card"><h2>SWISH Seller Hub</h2><p class="muted">Existing database and Edge Functions remain canonical.</p>
+    <div class="grid">
+      <div class="card metric"><span class="muted">Inventory</span><b>${inventoryCount}</b></div>
+      <div class="card metric"><span class="muted">Orders</span><b>${orders.length}</b></div>
+      <div class="card metric"><span class="muted">Awaiting dispatch</span><b>${awaiting.length}</b></div>
+      <div class="card metric"><span class="muted">Open tasks</span><b>${openTasks.length}</b></div>
+    </div></div>
+    <div class="card"><h3>Quick actions</h3><div class="toolbar">
+      <button class="btn primary" data-go="identify">Identify item</button>
+      <button class="btn" id="syncEbay">Full eBay sync</button>
+      <button class="btn" id="syncImages">Sync images</button>
+      <button class="btn" data-go="inventory">Open inventory</button>
+    </div><div id="dashMsg"></div></div>`);
+  document.querySelector('#syncEbay').onclick=async()=>runAction('ebaySync',{},'Full eBay sync complete.','dashMsg');
+  document.querySelector('#syncImages').onclick=async()=>runAction('image', {tenantId:S.tenant?.id,mode:'all'},'Image sync complete.','dashMsg');
+  document.querySelectorAll('[data-go]').forEach(b=>{
+    b.onclick=(e)=>{e.preventDefault();e.stopPropagation();go(b.dataset.go);};
+  });
+}
 
-function parseCsvRows(text,delimiter){
-
-  const rows = [];
-  let row = [];
-  let cell = '';
-  let quoted = false;
-
-  const source = String(text||'').replace(/^\uFEFF/,'');
-
-  for(let i=0;i<source.length;i++){
-
-    const ch = source[i];
-    const next = source[i+1];
-
-    if(ch === '"'){
-
-      if(quoted && next === '"'){
-        cell += '"';
-        i++;
-      }else{
-        quoted = !quoted;
-      }
-
-      continue;
-    }
-
-    if(!quoted && ch === delimiter){
-
-      row.push(cell);
-      cell = '';
-      continue;
-    }
-
-    if(!quoted && (ch === '\n' || ch === '\r')){
-
-      if(ch === '\r' && next === '\n'){
-        i++;
-      }
-
-      row.push(cell);
-      cell = '';
-
-      if(row.some(v=>String(v).trim() !== '')){
-        rows.push(row);
-      }
-
-      row = [];
-      continue;
-    }
-
-    cell += ch;
+async function pageInventory(){
+  replaceView(`<div class="card"><h2>Inventory</h2>
+    <div class="toolbar"><input id="invSearch" placeholder="Search title / SKU"><button class="btn primary" id="invLoad">Search</button><button class="btn" id="invSync">eBay Sync</button></div>
+    <div class="toolbar"><button class="btn" data-invfilter="all">All</button><button class="btn" data-invfilter="review">Needs review</button><button class="btn" data-invfilter="listed">Listed</button></div>
+    <div id="invBox"><div class="empty">Loading inventoryâ¦</div></div></div>`);
+  document.querySelector('#invLoad').onclick=loadInventory;
+  document.querySelector('#invSync').onclick=syncEbayInventory;
+  document.querySelectorAll('[data-invfilter]').forEach(b=>b.onclick=()=>{S.sub=b.dataset.invfilter;loadInventory()});
+  await loadInventory();
+}
+async function syncEbayInventory(){
+  const box=document.querySelector('#invBox');
+  if(box)box.innerHTML='<div class="empty"><div class="spinner"></div>Syncing eBay listingsâ¦</div>';
+  const payload={tenantId:S.tenant?.id,tenant_id:S.tenant?.id,mode:'full'};
+  let last=null;
+  for(const fn of [SWISH.functions.ebayListingsSync,SWISH.functions.ebaySync]){
+    try{
+      const d=await edge(fn,payload);
+      toast('eBay sync completed');
+      await loadInventory();
+      return d;
+    }catch(e){last=e}
   }
-
-  if(cell.length || row.length){
-
-    row.push(cell);
-
-    if(row.some(v=>String(v).trim() !== '')){
-      rows.push(row);
+  if(box)box.innerHTML=`<div class="error"><b>eBay sync failed.</b><br>${esc(last?.message||'Unknown error')}<p class="muted">The frontend is connected to the SWISH backend, but the existing eBay sync function is returning an error. No fake inventory has been created.</p></div>`;
+  return null;
+}
+async function loadInventory(){
+  const box=document.querySelector('#invBox');if(!box)return;
+  try{
+    const q=document.querySelector('#invSearch')?.value.trim()||'';
+    let rows=await safeTable('inventory',{limit:1000,order:{column:'created_at',ascending:false}});
+    // If the inventory table is empty, use the existing eBay listings table as the live eBay inventory source.
+    // This does not create a new table or backend.
+    if(!rows.length){
+      const listings=await safeTable('ebay_listings',{limit:1000,order:{column:'created_at',ascending:false}});
+      rows=listings.map(x=>({...x,id:x.inventory_item_id||x.item_id||x.id,__source:'ebay_listings',title:x.title||x.item_title,canonical_title:x.title||x.item_title,ebay_item_id:x.ebay_item_id||x.external_listing_id,external_listing_id:x.external_listing_id||x.ebay_item_id,status:x.status||'listed'}));
     }
-  }
+    if(q)rows=rows.filter(x=>[x.title,x.canonical_title,x.sku,x.ebay_item_id,x.external_listing_id].some(v=>String(v||'').toLowerCase().includes(q.toLowerCase())));
+    if(S.sub==='review')rows=rows.filter(x=>x.status==='review'||Number(x.confidence??x.identification_confidence??0)<.65);
+    if(S.sub==='listed')rows=rows.filter(x=>x.ebay_item_id||x.external_listing_id||x.listing_id||x.status==='listed'||x.status==='active');
+    box.innerHTML=rows.length?rows.map(inventoryRow).join(''):'<div class="empty">No inventory found.</div>';
+    box.querySelectorAll('[data-inv]').forEach(b=>b.onclick=()=>openInventory(b.dataset.inv));
+  }catch(e){box.innerHTML=`<div class="error">${esc(e.message)}</div>`}
+}
+function inventoryRow(x){return `<div class="row" data-inv="${esc(x.id||'')}"><div class="grow"><div class="title">${esc(x.title||x.canonical_title||x.sku||x.id)}</div><div class="muted">${esc(x.sku||x.id||'')}</div><div style="margin-top:5px"><span class="tag">${esc(x.status||'active')}</span><span class="tag">${x.ebay_item_id||x.external_listing_id?'eBay linked':'Not linked'}</span></div></div><div>${money(x.expected_selling_price||x.price||x.valuation_mid||x.valuation||0)}</div></div>`}
 
+async function openInventory(id){
+  const x=(await table('inventory',{eq:{id},single:true})); S.selected=x; pageInventoryItem(x);
+}
+function pageInventoryItem(x){
+  const a=obj(x.attributes||x.identification_data);const media=arr(x.media);const imgs=media.length?media:(x.image_url?[x.image_url]:[]);
+  replaceView(`<div class="card"><div class="toolbar"><button class="btn" id="backInv">â Inventory</button><button class="btn primary" id="reid">Re-identify</button><button class="btn" id="revalue">Re-value</button><button class="btn" id="islamic">Islamic / Countermark</button></div>
+    <h2>${esc(x.title||x.canonical_title||'Untitled item')}</h2><p class="muted">${esc(x.sku||x.id)}</p>
+    <div class="two"><div><h3>Images</h3><div class="thumbgrid">${imgs.map(u=>`<img src="${esc(u)}">`).join('')||'<div class="empty">No images stored</div>'}</div></div>
+    <div><h3>Identification</h3><p>Confidence: <b>${x.confidence==null&&x.identification_confidence==null?'â':Math.round(Number(x.identification_confidence??x.confidence)*100)+'%'}</b></p>
+    <p class="muted">${esc(a.numista_status||'Numista status not recorded')}</p><pre class="pre">${esc(JSON.stringify(a,null,2))}</pre></div></div>
+    <div class="two"><div class="card"><b>Valuation</b><p>${money(x.valuation_low)} â ${money(x.valuation_mid??x.valuation)} â ${money(x.valuation_high)}</p><span class="muted">${esc(x.valuation_confidence||'not valued')}</span></div>
+    <div class="card"><b>eBay</b><p>${esc(x.ebay_item_id||x.external_listing_id||'Not linked')}</p><button class="btn primary" id="prepareListing">Prepare eBay listing</button></div></div>
+    <div id="itemMsg"></div></div>`);
+  document.querySelector('#backInv').onclick=()=>go('inventory');
+  document.querySelector('#reid').onclick=()=>engineOnItem('identify',x);
+  document.querySelector('#revalue').onclick=()=>engineOnItem('value',x);
+  document.querySelector('#islamic').onclick=()=>engineOnItem('islamic',x);
+  document.querySelector('#prepareListing').onclick=()=>createListingFromItem(x);
+}
+async function engineOnItem(kind,item){
+  const out=document.querySelector('#itemMsg');out.innerHTML='<div class="empty"><div class="spinner"></div><p>Running SWISH engineâ¦</p></div>';
+  try{
+    const urls=arr(item.media).filter(u=>/^https?:/i.test(u));
+    let d;
+    if(kind==='identify'){
+      d=await edgeAny([SWISH.functions.identify,'swish-identify'],{tenant_id:S.tenant?.id,item_id:item.id,tenantId:S.tenant?.id,itemId:item.id,existingImageUrls:urls,specialistId:item.specialist_id||'curiosities_collectibles',knownAttributes:item.attributes||{}});
+      const ident=d?.identification||d?.result||{};
+      const patch={title:ident.title||ident.canonicalTitle||item.title,canonical_title:ident.canonicalTitle||ident.canonical_title||item.canonical_title,confidence:ident.confidence??item.confidence,identification_confidence:ident.confidence??item.identification_confidence,identification_data:ident,updated_at:new Date().toISOString()};
+      if(ident.attributes)patch.attributes={...(item.attributes||{}),...ident.attributes};
+      await update('inventory',item.id,patch); S.selected={...item,...patch};
+    } else if(kind==='value'){
+      d=await edgeAny([SWISH.functions.value,SWISH.functions.marketValue],{tenant_id:S.tenant?.id,item_id:item.id,tenantId:S.tenant?.id,itemId:item.id,title:item.title||item.canonical_title||'Unknown item',specialistId:item.specialist_id||'curiosities_collectibles',attributes:item.attributes||{},condition:item.condition||'',identificationConfidence:Number(item.identification_confidence??item.confidence??0),identificationTier:Number(item.identification_confidence??item.confidence??0)>=.85?'high':Number(item.identification_confidence??item.confidence??0)>=.65?'medium':'low',numistaTypeId:item.attributes?.numista_type_id?Number(item.attributes.numista_type_id):null,numistaMatchScore:Number(item.attributes?.numista_match_score||0),numistaMatchTier:item.attributes?.numista_status||'no_match',applyToItem:false});
+      const v=d?.valuation||d?.result||d||{};
+      const price=Number(v.recommendedListingPrice??v.recommended_listing_price??v.valuationMid??v.valuation_mid??0);
+      const patch={valuation_low:Number(v.valuationLow??v.valuation_low??0),valuation_mid:Number((v.valuationMid??v.valuation_mid??price??0)),valuation_high:Number(v.valuationHigh??v.valuation_high??0),valuation_confidence:v.valuationConfidence||v.valuation_confidence||'insufficient_data',expected_selling_price:price,expected_net:price*.8725,expected_profit:price*.8725-Number(item.acquired_cost||item.cost||0),updated_at:new Date().toISOString()};
+      await update('inventory',item.id,patch);S.selected={...item,...patch};
+    } else {
+      d=await edgeAny([SWISH.functions.islamic],{tenant_id:S.tenant?.id,item_id:item.id,tenantId:S.tenant?.id,itemId:item.id,existingImageUrls:urls,knownAttributes:item.attributes||{}});
+    }
+    out.innerHTML=`<div class="success"><b>${kind==='identify'?'Identification':kind==='value'?'Valuation':'Islamic / countermark'} complete.</b><pre class="pre">${esc(JSON.stringify(d,null,2))}</pre></div>`;
+    if(kind!=='islamic')setTimeout(()=>pageInventoryItem(S.selected),100);
+  }catch(e){out.innerHTML=`<div class="error">${esc(e.message)}</div>`}
+}
+
+async function pageIdentify(){
+  replaceView(`<div class="card"><h2>Identify / Value</h2><p class="muted">Uses the existing SWISH AI Edge Functions and learning/verification data held by the backend. No AI API key is entered here.</p>
+    <label class="drop" id="drop"><input id="files" type="file" accept="image/*" multiple class="hidden"><b>Drop images here or tap to choose</b><br><span class="muted">Multiple images improve identification.</span></label>
+    <div id="previews" class="thumbgrid" style="margin-top:12px"></div>
+    <div class="toolbar" style="margin-top:12px"><button class="btn primary" id="identifyBtn">Analyse with SWISH AI</button><button class="btn" id="clearFiles">Clear</button></div>
+    <div id="identifyOut"></div></div>`);
+  const input=document.querySelector('#files');const drop=document.querySelector('#drop');
+  drop.onclick=()=>input.click();input.onchange=e=>addIdentifyFiles(e.target.files);
+  drop.ondragover=e=>e.preventDefault();drop.ondrop=e=>{e.preventDefault();addIdentifyFiles(e.dataTransfer.files)};
+  document.querySelector('#clearFiles').onclick=()=>{S.identifyFiles=[];S.identifyPreviews=[];drawPreviews()};
+  document.querySelector('#identifyBtn').onclick=runNewIdentification;
+}
+function addIdentifyFiles(files){for(const f of Array.from(files||[])){S.identifyFiles.push(f);S.identifyPreviews.push(URL.createObjectURL(f));}drawPreviews();}
+function drawPreviews(){const b=document.querySelector('#previews');if(!b)return;b.innerHTML=S.identifyPreviews.map((u,i)=>`<div style="position:relative"><img src="${esc(u)}"><button class="btn bad" style="position:absolute;right:2px;top:2px;padding:2px 6px" data-rm="${i}">Ã</button></div>`).join('');b.querySelectorAll('[data-rm]').forEach(x=>x.onclick=()=>{const i=Number(x.dataset.rm);S.identifyFiles.splice(i,1);S.identifyPreviews.splice(i,1);drawPreviews();});}
+async function uploadImage(file,bucket='images',folder='identify'){
+  const path=`${folder}/${Date.now()}_${Math.random().toString(36).slice(2)}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
+  const {data,error}=await sb.storage.from(bucket).upload(path,file,{upsert:true});
+  if(error)throw error;
+  return sb.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+}
+async function runNewIdentification(){
+  const out=document.querySelector('#identifyOut');if(!S.identifyFiles.length){out.innerHTML='<div class="error">Add at least one image.</div>';return}
+  out.innerHTML='<div class="empty"><div class="spinner"></div><p>Running SWISH identification engineâ¦</p></div>';
+  try{
+    const urls=[];for(const f of S.identifyFiles){try{urls.push(await uploadImage(f))}catch(e){}}
+    const d=await edgeAny([SWISH.functions.identify,'swish-identify'],{images:urls.length?urls:S.identifyPreviews,image_data:urls.length?undefined:'local'});
+    const candidates=d?.candidates||((d?.identification)?[d.identification]:[]);
+    out.innerHTML=`<div class="card"><h3>Identification results</h3>${candidates.length?candidates.map((c,i)=>`<div class="row"><div class="grow"><div class="title">${esc(c.title||`Candidate ${i+1}`)}</div><div class="muted">${esc(c.category||'')} ${c.model?'Â· '+esc(c.model):''} Â· ${c.confidence==null?'':Math.round(Number(c.confidence)*100)+'% confidence'}</div><p class="small">${esc(c.description||'')}</p></div><div class="price">${money(c.estimated_value??c.valuation)}</div></div>`).join(''):'<div class="empty">No candidate returned.</div>'}
+      <pre class="pre">${esc(JSON.stringify(d,null,2))}</pre>
+      ${candidates.length?`<button class="btn primary" id="saveIdent">Save selected result to inventory</button>`:''}</div>`;
+    if(candidates.length)document.querySelector('#saveIdent').onclick=()=>saveIdentified(candidates[0],d,urls);
+  }catch(e){out.innerHTML=`<div class="error">${esc(e.message)}</div>`}
+}
+async function saveIdentified(c,d,urls){
+  try{
+    if(d?.item_id){toast('Identification updated existing item');go('inventory');return;}
+    const row={title:c.title,brand:c.brand,model:c.model,category:c.category,valuation:c.estimated_value,description:c.description,identification_data:c,confidence:c.confidence,status:'active'};
+    if(urls?.length)row.image_url=urls[0];
+    await insert('inventory',row);toast('Item saved to inventory');go('inventory');
+  }catch(e){toast(e.message,true)}
+}
+
+async function pageListings(){
+  replaceView(`<div class="card"><h2>Listings</h2>${tabs([['all','All'],['active','Active'],['draft','Draft'],['scheduled','Scheduled'],['ended','Ended']],S.sub)}
+    <div class="toolbar"><button class="btn primary" id="refreshListings">Refresh</button><button class="btn" id="newListing">New listing</button><button class="btn" id="reprAll">Reprice all</button></div><div id="listBox"><div class="empty">Loadingâ¦</div></div></div>`);
+  bindSubs();document.querySelector('#refreshListings').onclick=loadListingsPage;document.querySelector('#reprAll').onclick=()=>runEdgeToast(SWISH.functions.repriceAll,{},'Bulk repricing triggered');document.querySelector('#newListing').onclick=()=>listingEditor();
+  await loadListingsPage();
+}
+async function loadListingsPage(){
+  const box=document.querySelector('#listBox');if(!box)return;
+  try{
+    let rows=await table('listings',{limit:1000,order:{column:'updated_at',ascending:false}});
+    if(S.sub!=='all')rows=rows.filter(x=>x.status===S.sub);
+    box.innerHTML=rows.length?`<div class="table-wrap"><table class="tbl"><thead><tr><th>Title</th><th>Platform</th><th>Status</th><th class="right">Price</th><th>Actions</th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x.title||'Untitled')}</td><td>${esc(x.platform||'')}</td><td>${esc(x.status||'')}</td><td class="right">${money(x.price)}</td><td><button class="btn" data-edit="${esc(x.id)}">Edit</button> <button class="btn" data-pre="${esc(x.id)}">Preflight</button> <button class="btn primary" data-pub="${esc(x.id)}">Publish</button> <button class="btn" data-rep="${esc(x.id)}">Reprice</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No listings found.</div>';
+    box.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>listingEditor(b.dataset.edit));
+    box.querySelectorAll('[data-pre]').forEach(b=>b.onclick=()=>runEdgeToast(SWISH.functions.listingPreflight,{listing_id:b.dataset.pre},'Preflight complete'));
+    box.querySelectorAll('[data-pub]').forEach(b=>b.onclick=()=>runEdgeToast(SWISH.functions.publishListing,{listing_id:b.dataset.pub},'Listing published'));
+    box.querySelectorAll('[data-rep]').forEach(b=>b.onclick=()=>runEdgeToast(SWISH.functions.reprice,{listing_id:b.dataset.rep},'Listing repriced'));
+  }catch(e){box.innerHTML=`<div class="error">${esc(e.message)}</div>`}
+}
+async function listingEditor(id){
+  let x=id?await table('listings',{eq:{id},single:true}):{platform:'ebay',status:'draft'};
+  replaceView(`<div class="card"><div class="toolbar"><button class="btn" id="backListings">â Listings</button><button class="btn primary" id="saveListing">Save</button>${id?'<button class="btn" id="preflight">Preflight</button><button class="btn good" id="publish">Publish</button>':''}</div><h2>${id?'Edit':'New'} Listing</h2>
+    <div class="two"><div><label class="muted">Title *</label><input id="lfTitle" value="${esc(x.title)}"></div><div><label class="muted">Price (Â£)</label><input id="lfPrice" type="number" step="0.01" value="${esc(x.price??'')}"></div>
+    <div><label class="muted">Platform</label><select id="lfPlatform"><option value="ebay">eBay</option><option value="amazon">Amazon</option><option value="depop">Depop</option><option value="vinted">Vinted</option></select></div>
+    <div><label class="muted">Status</label><select id="lfStatus"><option>draft</option><option>active</option><option>ended</option><option>scheduled</option></select></div>
+    <div><label class="muted">Condition</label><input id="lfCondition" value="${esc(x.condition)}"></div><div><label class="muted">Category</label><input id="lfCategory" value="${esc(x.category)}"></div>
+    <div style="grid-column:1/-1"><label class="muted">Description</label><textarea id="lfDesc">${esc(x.description)}</textarea></div>
+    <div><label class="muted">Inventory Item ID</label><input id="lfItem" value="${esc(x.item_id)}"></div></div><div id="listingMsg"></div></div>`);
+  document.querySelector('#lfPlatform').value=x.platform||'ebay';document.querySelector('#lfStatus').value=x.status||'draft';
+  document.querySelector('#backListings').onclick=()=>go('listings');
+  document.querySelector('#saveListing').onclick=async()=>{try{
+    const row={...x,title:document.querySelector('#lfTitle').value,price:Number(document.querySelector('#lfPrice').value||0),platform:document.querySelector('#lfPlatform').value,status:document.querySelector('#lfStatus').value,condition:document.querySelector('#lfCondition').value,category:document.querySelector('#lfCategory').value,description:document.querySelector('#lfDesc').value,item_id:document.querySelector('#lfItem').value||null};
+    delete row.id; const saved=id?await update('listings',id,row):await insert('listings',row);toast('Listing saved');listingEditor(saved.id);
+  }catch(e){toast(e.message,true)}};
+  if(id){document.querySelector('#preflight').onclick=()=>runEdgeToast(SWISH.functions.listingPreflight,{listing_id:id},'Preflight complete');document.querySelector('#publish').onclick=()=>runEdgeToast(SWISH.functions.publishListing,{listing_id:id},'Published');}
+}
+
+async function createListingFromItem(item){
+  const title=prompt('eBay title',item.title||item.canonical_title||'');if(title===null)return;
+  const price=Number(prompt('eBay price',item.expected_selling_price||item.valuation_mid||''));if(!price)return;
+  try{
+    const d=await edge(SWISH.functions.generate,{tenant_id:S.tenant?.id,item_id:item.id,tenantId:S.tenant?.id,itemId:item.id,title,price,delivery_method:'SIMPLE_DELIVERY',deliveryMethod:'SIMPLE_DELIVERY'});
+    const listingId=d?.listingId||d?.listing_id||d?.listing?.id||d?.id;if(!listingId)throw new Error('Listing generator returned no listing ID.');
+    await edge('swish-ebay-list',{tenant_id:S.tenant?.id,item_id:item.id,tenantId:S.tenant?.id,itemId:item.id,listingId,listing_id:listingId,listingType:d.listingType||'FIXED_PRICE',categoryId:d.categoryId,deliveryMethod:'SIMPLE_DELIVERY'});
+    toast('eBay listing submitted');
+  }catch(e){toast(e.message,true)}
+}
+
+async function pageOrders(){
+  replaceView(`<div class="card"><h2>Orders</h2><div class="toolbar"><button class="btn primary" id="syncOrders">Sync eBay orders</button><button class="btn" id="refreshOrders">Refresh</button></div><div id="ordersBox"></div></div>`);
+  document.querySelector('#syncOrders').onclick=async()=>{try{await edge('ebay-orders',{tenantId:S.tenant?.id,daysBack:90});toast('eBay orders synced');await loadOrdersPage()}catch(e){toast(e.message,true)}};
+  document.querySelector('#refreshOrders').onclick=loadOrdersPage;await loadOrdersPage();
+}
+async function loadOrdersPage(){
+  const box=document.querySelector('#ordersBox');if(!box)return;try{const rows=await table('orders',{limit:500,order:{column:'created_at',ascending:false}});box.innerHTML=rows.length?`<div class="table-wrap"><table class="tbl"><thead><tr><th>Order</th><th>Buyer</th><th>Status</th><th class="right">Total</th><th></th></tr></thead><tbody>${rows.map(x=>`<tr><td>${esc(x.external_order_id||x.order_id||x.id)}</td><td>${esc(x.buyer_name||x.buyer_username||'')}</td><td>${esc(x.status||'')}</td><td class="right">${money(x.total_amount??x.total)}</td><td><button class="btn" data-dispatch="${esc(x.id)}">Dispatch</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No orders.</div>';box.querySelectorAll('[data-dispatch]').forEach(b=>b.onclick=()=>dispatchOne(b.dataset.dispatch));}catch(e){box.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function dispatchOne(id){const n=prompt('Tracking number (optional)')||'';const c=prompt('Carrier (optional)','Royal Mail')||'';try{await edge(SWISH.functions.dispatch,{order_id:id,tracking_number:n,carrier:c});toast('Dispatched');loadOrdersPage()}catch(e){toast(e.message,true)}}
+
+async function pageEbay(){
+  replaceView(`<div class="card"><h2>eBay Hub</h2><p class="muted">All eBay credentials remain in the existing backend. This frontend only invokes the existing Edge Functions.</p>
+    <div class="grid"><div class="card metric"><span class="muted">Account</span><b>${esc(S.connector?.status||'Unknown')}</b></div><div class="card metric"><span class="muted">Seller</span><b style="font-size:14px">${esc(S.connector?.seller_account_id||'â')}</b></div><div class="card metric"><span class="muted">Last sync</span><b style="font-size:14px">${datetime(S.connector?.last_sync_at)}</b></div><div class="card metric"><span class="muted">Publishing</span><b>${S.connector?.can_publish?'READY':'CHECK'}</b></div></div>
+    <div class="toolbar"><button class="btn primary" id="ebayConnect">Connect eBay</button><button class="btn" id="ebaySync">Full sync</button><button class="btn" id="ebayListSync">Sync listings</button></div>
+    <div class="four">
+      ${[['ebayListings','Listings'],['categories','Category Manager'],['ebayOrders','Orders'],['messages','Messages'],['offers','Offers'],['returns','Returns'],['cases','Cases'],['finance','Finances'],['analytics','Analytics'],['import','Import / Export'],['logs','Logs']].map(x=>`<button class="btn" data-ebay="${x[0]}">${x[1]}</button>`).join('')}
+    </div><div id="ebayMsg"></div></div>`);
+  document.querySelector('#ebayConnect').onclick=async()=>{try{const d=await edge(SWISH.functions.ebayAuth,{});if(d?.url)window.open(d.url,'_blank');else toast('No OAuth URL returned',true)}catch(e){toast(e.message,true)}};
+  document.querySelector('#ebaySync').onclick=()=>runAction('ebaySync',{},'eBay sync complete.','ebayMsg');
+  document.querySelector('#ebayListSync').onclick=()=>runAction('ebayListingsSync',{},'eBay listings synced.','ebayMsg');
+  document.querySelectorAll('[data-ebay]').forEach(b=>b.onclick=()=>ebaySub(b.dataset.ebay));
+}
+function ebaySub(p){S.page='ebay';S.sub=p;renderEbaySub();}
+async function renderEbaySub(){
+  const base=`<div class="card"><div class="toolbar"><button class="btn" id="backEbay">â eBay Hub</button></div>`;
+  if(S.sub==='categories'){replaceView(base+'<h2>eBay Category Manager</h2><div id="ebaySubBox"></div></div>');return loadCategoryManager();}
+  if(S.sub==='ebayListings'){replaceView(base+'<h2>eBay Listings</h2><div id="ebaySubBox"></div></div>');return loadEbayListings();}
+  if(S.sub==='ebayOrders'){replaceView(base+'<h2>eBay Orders</h2><div id="ebaySubBox"></div></div>');return loadTableInto('ebay_orders','ebaySubBox');}
+  if(S.sub==='messages'){replaceView(base+'<h2>eBay Messages</h2><div id="ebaySubBox"></div></div>');return loadMessages();}
+  if(S.sub==='offers'){replaceView(base+'<h2>eBay Offers</h2><div id="ebaySubBox"></div></div>');return loadOffers();}
+  if(S.sub==='returns'){replaceView(base+'<h2>eBay Returns</h2><div id="ebaySubBox"></div></div>');return loadReturns();}
+  if(S.sub==='cases'){replaceView(base+'<h2>eBay Cases</h2><div id="ebaySubBox"></div></div>');return loadCases();}
+  if(S.sub==='finance'){replaceView(base+'<h2>eBay Finances</h2><div id="ebaySubBox"></div></div>');return loadFinance();}
+  if(S.sub==='analytics'){replaceView(base+'<h2>eBay Analytics</h2><div id="ebaySubBox"></div></div>');return loadAnalytics();}
+  if(S.sub==='import'){replaceView(base+`<h2>eBay Import / Export</h2>
+  <div class="two">
+    <div>
+      <label class="muted">Import type</label>
+      <select id="impType"><option>listings</option><option>orders</option><option>inventory</option><option>categories</option></select>
+      <input id="csvFile" type="file" accept=".csv,.xlsx">
+      <button class="btn primary" id="importCsv">Import</button>
+    </div>
+    <div>
+      <label class="muted">Export</label>
+      <button class="btn" id="exportCsv">Export</button>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <b>Proven eBay Categories</b>
+    <p class="muted">Categories are learned from the actual eBay Category 1/2 ID and name columns in your eBay export and from category values already stored in SWISH. No new table is created.</p>
+    <div id="provenCategories"><div class="empty">Choose an eBay CSV/XLSX file to preview its proven categories.</div></div>
+  </div>
+  <div id="ebaySubBox"></div></div>`);return bindImport();}
+  if(S.sub==='logs'){replaceView(base+'<h2>eBay Logs</h2><div id="ebaySubBox"></div></div>');return loadLogs();}
+}
+function categoryValue(x){
+  const a=obj(x.attributes||x.identification_data||{});
+  return {id:x.ebay_category_id||x.category_id||x.ebay_categoryId||a.ebay_category_id||a.category_id||'',name:x.ebay_category_name||x.category_name||a.ebay_category_name||a.category_name||x.category||''};
+}
+async function ebayCategorySearch(term){
+  const payload={tenant_id:S.tenant?.id,tenantId:S.tenant?.id,query:term,search:term,marketplace_id:'EBAY_GB',marketplaceId:'EBAY_GB'};
+  for(const name of ['ebay-taxonomy-search','ebay-category-search','ebay-categories','ebay-taxonomy']){
+    try{const d=await edge(name,payload);const rows=arr(d?.categories||d?.results||d?.data||d);if(rows.length)return rows;}catch(e){}
+  }
+  return [];
+}
+async function loadCategoryManager(){
+  const b=document.querySelector('#ebaySubBox');if(!b)return;
+  b.innerHTML=`<div class="toolbar"><input id="catSearch" placeholder="Search inventory title / SKU / category" style="min-width:240px"><button class="btn primary" id="catRefresh">Refresh inventory</button></div>
+  <div class="card" style="margin:12px 0"><b>Category Manager</b><p class="muted">This uses the existing SWISH database. Search your inventory, choose an eBay category, then save it. SWISH will store the eBay category ID and name. The browser never receives eBay credentials.</p></div>
+  <div id="catBox"><div class="empty">Loading inventoryâ¦</div></div>`;
+  document.querySelector('#catRefresh').onclick=loadCategoryManager;
+  document.querySelector('#catSearch').oninput=()=>renderCategoryRows(S.cache.categoryInventory||[],document.querySelector('#catSearch').value);
+  await loadCategoryChoices();
+}
+async function loadCategoryChoices(){
+  const inv=await safeTable('inventory',{limit:1000,order:{column:'created_at',ascending:false}});
+  const listings=await safeTable('ebay_listings',{limit:1000,order:{column:'created_at',ascending:false}});
+  const lm={};listings.forEach(x=>{const key=x.item_id||x.inventory_item_id||x.ebay_item_id||x.external_listing_id;if(key)lm[key]=x;});
+  const rows=inv.length ? inv.map(x=>({...x,__listing:lm[x.id]||lm[x.ebay_item_id]||null,__cat:categoryValue({...x,...(lm[x.id]||{})})})) : listings.map(x=>({...x,id:x.inventory_item_id||x.item_id||x.id,__listing:x,__cat:categoryValue(x),__source:'ebay_listings',title:x.title||x.item_title,canonical_title:x.title||x.item_title,ebay_item_id:x.ebay_item_id||x.external_listing_id,external_listing_id:x.external_listing_id||x.ebay_item_id}));
+  S.cache.categoryInventory=rows;renderCategoryRows(rows,'');
+}
+function renderCategoryRows(rows,term){
+  const b=document.querySelector('#catBox');if(!b)return;term=String(term||'').toLowerCase().trim();
+  const filtered=rows.filter(x=>!term||[x.title,x.canonical_title,x.sku,x.ebay_item_id,x.external_listing_id,x.__cat?.id,x.__cat?.name].some(v=>String(v||'').toLowerCase().includes(term)));
+  if(!filtered.length){b.innerHTML='<div class="empty">No matching inventory items.</div>';return;}
+  b.innerHTML=`<div class="table-wrap"><table class="tbl"><thead><tr><th>Item</th><th>eBay listing</th><th>Current category</th><th>Change</th></tr></thead><tbody>${filtered.map(x=>{const c=x.__cat||{};return `<tr><td><div class="title">${esc(x.title||x.canonical_title||x.sku||x.id)}</div><div class="muted">${esc(x.sku||x.id)}</div></td><td>${esc(x.ebay_item_id||x.external_listing_id||x.__listing?.external_listing_id||'Not linked')}</td><td>${c.id?`<b>${esc(c.id)}</b> Â· ${esc(c.name||'')}`:'<span class="muted">Not set</span>'}</td><td><button class="btn primary" data-cat-item="${esc(x.id)}">Select category</button></td></tr>`}).join('')}</tbody></table></div>`;
+  b.querySelectorAll('[data-cat-item]').forEach(btn=>btn.onclick=()=>openCategoryEditor(btn.dataset.catItem));
+}
+async function openCategoryEditor(itemId){
+  let item=null;
+  try{item=await table('inventory',{eq:{id:itemId},single:true})}catch(_){}
+  const listings=await safeTable('ebay_listings',{limit:1000});
+  if(!item) item=listings.find(x=>(x.inventory_item_id||x.item_id||x.id)===itemId)||listings.find(x=>x.id===itemId);
+  if(!item) throw new Error('Inventory/listing record not found');
+  const listing=listings.find(x=>x.item_id===itemId||x.inventory_item_id===itemId||x.ebay_item_id===item.ebay_item_id||x.external_listing_id===item.external_listing_id)||null;
+  const current=categoryValue({...item,...(listing||{})});
+  replaceView(`<div class="card"><div class="toolbar"><button class="btn" id="catBack">â Category Manager</button></div><h2>Change eBay category</h2><p><b>${esc(item.title||item.canonical_title||item.id)}</b></p>
+  <div class="two"><div><label class="muted">eBay Category ID</label><input id="catId" value="${esc(current.id)}" placeholder="e.g. 179731"></div><div><label class="muted">Category name</label><input id="catName" value="${esc(current.name)}" placeholder="e.g. Other Collectables"></div></div>
+  <div class="toolbar" style="margin-top:12px"><input id="catChoiceSearch" placeholder="Type category name to search eBay"><button class="btn" id="catAI">AI suggest</button><button class="btn primary" id="catSave">Save category</button></div>
+  <div id="catChoices"><div class="muted">Type at least 2 characters to search. If the existing backend exposes an eBay taxonomy search it will be used; otherwise enter the exact eBay category ID/name.</div></div><div id="catMsg"></div></div>`);
+  document.querySelector('#catBack').onclick=()=>{S.sub='categories';renderEbaySub()};
+  document.querySelector('#catChoiceSearch').oninput=async()=>{
+    const q=document.querySelector('#catChoiceSearch').value.trim();if(q.length<2)return;
+    const live=await ebayCategorySearch(q);const list=live.map(c=>({id:c.ebay_category_id||c.category_id||c.id||c.categoryId,name:c.ebay_category_name||c.category_name||c.name||c.category||''})).filter(c=>c.id&&c.name).slice(0,100);
+    document.querySelector('#catChoices').innerHTML=list.length?list.map(c=>`<button class="btn" style="margin:4px" data-cat-choice="${esc(c.id)}" data-cat-name="${esc(c.name)}">${esc(c.name)} Â· ${esc(c.id)}</button>`).join(''):'<div class="muted">No live eBay category search is available through the existing backend. You can still enter the exact eBay category ID and name.</div>';
+    document.querySelectorAll('[data-cat-choice]').forEach(x=>x.onclick=()=>{document.querySelector('#catId').value=x.dataset.catChoice;document.querySelector('#catName').value=x.dataset.catName});
+  };
+  document.querySelector('#catAI').onclick=async()=>{try{const urls=arr(item.media).filter(u=>/^https?:/i.test(u));const d=await edgeAny([SWISH.functions.identify,'swish-identify'],{tenant_id:S.tenant?.id,item_id:item.id,tenantId:S.tenant?.id,itemId:item.id,existingImageUrls:urls,specialistId:item.specialist_id||'curiosities_collectibles',knownAttributes:item.attributes||{},categorySuggestionOnly:true});const suggested=d?.category||d?.suggested_category||d?.result?.category||d?.candidates?.[0]?.category||'';if(suggested){document.querySelector('#catName').value=suggested;toast('AI suggestion added â select/enter the matching eBay category ID before saving')}else toast('AI did not return a category suggestion',true)}catch(e){toast(e.message,true)}};
+  document.querySelector('#catSave').onclick=async()=>{const id=document.querySelector('#catId').value.trim(),name=document.querySelector('#catName').value.trim();if(!id||!name){toast('Enter both the eBay category ID and name',true);return}const msg=document.querySelector('#catMsg');msg.innerHTML='<div class="empty">Saving category to SWISHâ¦</div>';try{
+    const patch={ebay_category_id:id,ebay_category_name:name,category:name,category_id:id,updated_at:new Date().toISOString()};
+    if(item.__source!=='ebay_listings' && item.id) await update('inventory',item.id,patch).catch(()=>{});
+    if(listing?.id) await update('ebay_listings',listing.id,patch).catch(()=>{});
+    else if(item.__source==='ebay_listings' && item.id) await update('ebay_listings',item.id,patch).catch(()=>{});
+    let ebayChanged=false;
+    for(const fn of ['ebay-revise-listing','ebay-revise-item','ebay-category-update']){try{await edge(fn,{tenant_id:S.tenant?.id,tenantId:S.tenant?.id,item_id:item.id,itemId:item.id,listing_id:listing?.id,listingId:listing?.external_listing_id||listing?.ebay_item_id||item.ebay_item_id||item.external_listing_id,categoryId:id,category_id:id,categoryName:name,category_name:name});ebayChanged=true;break}catch(e){}}
+    msg.innerHTML=ebayChanged?'<div class="success">Category saved to SWISH and the existing eBay revision action accepted the update.</div>':'<div class="success">Category saved to SWISH. The current backend did not expose an eBay category-revision action, so the live eBay listing was not falsely reported as changed.</div>';
+  }catch(e){msg.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+}
+
+async function loadEbayListings(){const box=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_listings',{limit:500,order:{column:'created_at',ascending:false}});box.innerHTML=tableHTML(rows,['title','status','price','external_listing_id'],true)}catch(e){box.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+function tableHTML(rows,fields,actions=false){if(!rows.length)return'<div class="empty">No records.</div>';return`<div class="table-wrap"><table class="tbl"><thead><tr>${fields.map(f=>`<th>${esc(f.replace(/_/g,' '))}</th>`).join('')}${actions?'<th>Actions</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr>${fields.map(f=>`<td>${esc(typeof r[f]==='number'&&/price|amount|total/.test(f)?money(r[f]):r[f]??'')}</td>`).join('')}${actions?`<td><button class="btn" data-reprice="${esc(r.id||'')}">Reprice</button></td>`:''}</tr>`).join('')}</tbody></table></div>`}
+async function loadTableInto(name,id){const b=document.querySelector('#'+id);try{const rows=await table(name,{limit:500,order:{column:'created_at',ascending:false}});b.innerHTML=tableHTML(rows,Object.keys(rows[0]||{}).filter(k=>['id','tenant_id'].indexOf(k)<0).slice(0,7));}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function loadMessages(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_messages',{limit:200,order:{column:'created_at',ascending:false}});b.innerHTML=rows.length?rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.subject||'eBay message')}</div><div class="muted">${esc(r.buyer_username||'')} Â· ${esc(r.body||r.message||'')}</div></div><button class="btn" data-msg="${esc(r.message_id||r.id)}">Reply</button></div>`).join(''):'<div class="empty">No messages.</div>';b.querySelectorAll('[data-msg]').forEach(x=>x.onclick=async()=>{const text=prompt('Reply');if(!text)return;try{await edge(SWISH.functions.ebayReply,{message_id:x.dataset.msg,body:text});toast('Reply sent')}catch(e){toast(e.message,true)}})}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function loadOffers(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_offers',{limit:200,order:{column:'created_at',ascending:false}});b.innerHTML=rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.title||r.item_title||r.offer_id)}</div><div class="muted">${money(r.offer_price)} Â· ${esc(r.status||'')}</div></div><button class="btn good" data-offer="${esc(r.id)}" data-action="accept">Accept</button><button class="btn bad" data-offer="${esc(r.id)}" data-action="decline">Decline</button></div>`).join('')||'<div class="empty">No offers.</div>';b.querySelectorAll('[data-offer]').forEach(x=>x.onclick=async()=>{try{await edge(SWISH.functions.ebayOffer,{offer_id:x.dataset.offer,action:x.dataset.action});toast('Offer updated');loadOffers()}catch(e){toast(e.message,true)}})}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function loadReturns(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_returns',{limit:200,order:{column:'created_at',ascending:false}});b.innerHTML=rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.return_id||r.external_return_id)}</div><div class="muted">${esc(r.status||'')} Â· ${esc(r.reason||'')}</div></div><button class="btn" data-ret="${esc(r.id)}">Action</button></div>`).join('')||'<div class="empty">No returns.</div>';b.querySelectorAll('[data-ret]').forEach(x=>x.onclick=async()=>{const a=prompt('Return action','accept');if(!a)return;try{await edge(SWISH.functions.ebayReturn,{return_id:x.dataset.ret,action:a});toast('Return action submitted')}catch(e){toast(e.message,true)}})}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function loadCases(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_cases',{limit:200,order:{column:'created_at',ascending:false}});b.innerHTML=rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.case_id||r.external_case_id)}</div><div class="muted">${esc(r.status||'')} Â· ${esc(r.reason||'')}</div></div><button class="btn" data-case="${esc(r.id)}">Respond</button></div>`).join('')||'<div class="empty">No cases.</div>';b.querySelectorAll('[data-case]').forEach(x=>x.onclick=async()=>{try{await edge(SWISH.functions.ebayCase,{case_id:x.dataset.case});toast('Case response submitted')}catch(e){toast(e.message,true)}})}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function loadFinance(){const b=document.querySelector('#ebaySubBox');try{const summary=await edge(SWISH.functions.ebayFinance,{});const payouts=await table('ebay_payouts',{limit:50,order:{column:'created_at',ascending:false}});const tx=await table('ebay_transactions',{limit:50,order:{column:'created_at',ascending:false}});b.innerHTML=`<pre class="pre">${esc(JSON.stringify(summary,null,2))}</pre><h3>Payouts</h3>${tableHTML(payouts,['payout_id','amount','status','created_at'])}<h3>Transactions</h3>${tableHTML(tx,['transaction_id','amount','type','created_at'])}`}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function loadAnalytics(){const b=document.querySelector('#ebaySubBox');try{const a=await edge(SWISH.functions.ebayAnalytics,{});const orders=await table('orders',{limit:500});const by={};orders.forEach(o=>{const d=new Date(o.created_at||Date.now());const k=`${d.getMonth()+1}/${d.getFullYear()}`;by[k]??={orders:0,revenue:0};by[k].orders++;by[k].revenue+=Number(o.total_amount||o.sale_price||0)});b.innerHTML=`<pre class="pre">${esc(JSON.stringify(a,null,2))}</pre><div class="table-wrap"><table class="tbl"><thead><tr><th>Month</th><th>Orders</th><th>Revenue</th></tr></thead><tbody>${Object.entries(by).slice(-12).map(([k,v])=>`<tr><td>${k}</td><td>${v.orders}</td><td>${money(v.revenue)}</td></tr>`).join('')}</tbody></table></div>`}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+function csvCell(row,...names){
+  for(const n of names){
+    const v=row?.[n];
+    if(v!==undefined && v!==null && String(v).trim()!=='')return String(v).trim();
+  }
+  return '';
+}
+function normaliseEbayCsvRow(row){
+  const itemId=csvCell(row,'Item number','Item Number','item number','item_number','ItemNumber');
+  const title=csvCell(row,'Title','title');
+  const sku=csvCell(row,'Custom label (SKU)','Custom Label (SKU)','SKU','sku','Custom label');
+  const price=csvCell(row,'Current price','Start price','Price','price');
+  const qty=csvCell(row,'Available quantity','Quantity','quantity');
+  const cat1Id=csvCell(row,'eBay category 1 number','eBay Category 1 Number','Category 1 Number','category_1_number');
+  const cat1Name=csvCell(row,'eBay category 1 name','eBay Category 1 Name','Category 1 Name','category_1_name');
+  const cat2Id=csvCell(row,'eBay category 2 number','eBay Category 2 Number','Category 2 Number','category_2_number');
+  const cat2Name=csvCell(row,'eBay category 2 name','eBay Category 2 Name','Category 2 Name','category_2_name');
+  return {
+    ebay_item_id:itemId||null,
+    external_listing_id:itemId||null,
+    title:title||null,
+    sku:sku||null,
+    price:Number.isFinite(Number(price))?Number(price):null,
+    current_price:Number.isFinite(Number(price))?Number(price):null,
+    quantity:Number.isFinite(Number(qty))?Number(qty):null,
+    available_quantity:Number.isFinite(Number(qty))?Number(qty):null,
+    ebay_category_id:cat1Id||null,
+    ebay_category_name:cat1Name||null,
+    category_id:cat1Id||null,
+    category:cat1Name||null,
+    ebay_secondary_category_id:cat2Id||null,
+    ebay_secondary_category_name:cat2Name||null,
+    category_2_id:cat2Id||null,
+    category_2_name:cat2Name||null,
+    raw:row
+  };
+}
+async function readEbayImportFile(file){
+  const name=String(file?.name||'').toLowerCase();
+  if(!window.XLSX)throw new Error('The spreadsheet reader is not available. Reload the page and try again.');
+  const buf=await file.arrayBuffer();
+  const wb=XLSX.read(buf,{type:'array',cellDates:false,raw:false});
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  if(!ws)throw new Error('The file contains no worksheet.');
+  const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false});
+  if(!rows.length)throw new Error('The selected eBay export contains no rows.');
   return rows;
 }
-
-
-function normaliseEbayHeader(value){
-
-  return String(value||'')
-    .trim()
-    .replace(/^\uFEFF/,'')
-    .replace(/\s+/g,' ')
-    .toLowerCase();
-}
-
-
-function csvNumber(value){
-
-  if(value === null || value === undefined || value === ''){
-    return null;
+function buildProvenCategories(rows){
+  const map=new Map();
+  for(const row of rows){
+    const n=normaliseEbayCsvRow(row);
+    [[n.ebay_category_id,n.ebay_category_name,'Primary'],[n.ebay_secondary_category_id,n.ebay_secondary_category_name,'Secondary']].forEach(([id,name,type])=>{
+      if(!id||!name)return;
+      const key=String(id);
+      const cur=map.get(key)||{id:key,name,type,count:0};
+      cur.count++;
+      if(cur.type!=='Primary')cur.type=type;
+      map.set(key,cur);
+    });
   }
-
-  const cleaned =
-    String(value)
-      .replace(/[£$€,\s]/g,'')
-      .trim();
-
-  const n = Number(cleaned);
-
-  return Number.isFinite(n) ? n : null;
+  return [...map.values()].sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name));
 }
-
-
-function parseEbayCsv(text){
-
-  const delimiter = detectCsvDelimiter(text);
-  const matrix = parseCsvRows(text,delimiter);
-
-  if(!matrix.length){
-    throw new Error('No rows found in CSV.');
-  }
-
-  const headers = matrix[0].map(x=>String(x||'').trim());
-
-  const headerMap = {};
-
-  headers.forEach((h,i)=>{
-    headerMap[normaliseEbayHeader(h)] = i;
+function renderProvenCategories(categories){
+  const box=document.querySelector('#provenCategories');if(!box)return;
+  if(!categories.length){box.innerHTML='<div class="empty">No eBay category ID/name pairs were found in this file.</div>';return;}
+  box.innerHTML=`<div class="table-wrap"><table class="tbl"><thead><tr><th>eBay category</th><th>ID</th><th>Source</th><th>Uses</th><th></th></tr></thead><tbody>${categories.map(c=>`<tr><td>${esc(c.name)}</td><td><b>${esc(c.id)}</b></td><td>${esc(c.type)}</td><td>${c.count}</td><td><button class="btn" data-proven-cat="${esc(c.id)}" data-proven-name="${esc(c.name)}">Use</button></td></tr>`).join('')}</tbody></table></div>`;
+  box.querySelectorAll('[data-proven-cat]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.provenCat,name=b.dataset.provenName;
+    S.cache.provenCategorySelection={id,name};
+    toast(`Proven category selected: ${name} Â· ${id}`);
   });
-
-  const get = (row,name) => {
-
-    const i = headerMap[normaliseEbayHeader(name)];
-
-    if(i === undefined){
-      return '';
-    }
-
-    return String(row[i] ?? '').trim();
+}
+async function bindImport(){
+  const fileInput=document.querySelector('#csvFile');
+  if(fileInput)fileInput.onchange=async()=>{
+    try{
+      const f=fileInput.files[0];if(!f)return;
+      const rows=await readEbayImportFile(f);
+      const categories=buildProvenCategories(rows);
+      S.cache.ebayImportRows=rows.map(normaliseEbayCsvRow);
+      S.cache.provenCategories=categories;
+      renderProvenCategories(categories);
+      const ids=new Set(rows.map(r=>csvCell(r,'Item number','Item Number','item number','item_number')).filter(Boolean));
+      const box=document.querySelector('#ebaySubBox');
+      if(box)box.innerHTML=`<div class="success">Preview ready: ${rows.length} rows Â· ${ids.size} eBay item IDs Â· ${categories.length} proven categories. Nothing has been changed yet.</div>`;
+    }catch(e){const box=document.querySelector('#ebaySubBox');if(box)box.innerHTML=`<div class="error">${esc(e.message)}</div>`}
   };
-
-  const rows = matrix
-    .slice(1)
-    .map(raw => {
-
-      const itemNumber = get(raw,'Item number');
-      const sku = get(raw,'Custom label (SKU)');
-
-      return {
-
-        /*
-         * Original eBay fields
-         */
-        ebay_item_id:itemNumber,
-        title:get(raw,'Title'),
-        variation_details:get(raw,'Variation details'),
-        sku:sku,
-
-        available_quantity:
-          csvNumber(get(raw,'Available quantity')),
-
-        format:get(raw,'Format'),
-        currency:get(raw,'Currency'),
-
-        start_price:
-          csvNumber(get(raw,'Start price')),
-
-        auction_buy_it_now_price:
-          csvNumber(get(raw,'Auction Buy It Now price')),
-
-        reserve_price:
-          csvNumber(get(raw,'Reserve price')),
-
-        current_price:
-          csvNumber(get(raw,'Current price')),
-
-        sold_quantity:
-          csvNumber(get(raw,'Sold quantity')),
-
-        watchers:
-          csvNumber(get(raw,'Watchers')),
-
-        bids:
-          csvNumber(get(raw,'Bids')),
-
-        start_date:get(raw,'Start date'),
-        end_date:get(raw,'End date'),
-
-        ebay_category_1_name:
-          get(raw,'eBay category 1 name'),
-
-        ebay_category_1_id:
-          get(raw,'eBay category 1 number'),
-
-        ebay_category_2_name:
-          get(raw,'eBay category 2 name'),
-
-        ebay_category_2_id:
-          get(raw,'eBay category 2 number'),
-
-        condition:
-          get(raw,'Condition'),
-
-        professional_grader:
-          get(raw,'CD:Professional Grader - (ID: 27501)'),
-
-        grade:
-          get(raw,'CD:Grade - (ID: 27502)'),
-
-        certification_number:
-          get(raw,'CDA:Certification Number - (ID: 27503)'),
-
-        card_condition:
-          get(raw,'CD:Card Condition - (ID: 40001)'),
-
-        epid:
-          get(raw,'eBay Product ID(ePID)'),
-
-        listing_site:
-          get(raw,'Listing site'),
-
-        upc:
-          get(raw,'P:UPC'),
-
-        ean:
-          get(raw,'P:EAN'),
-
-        isbn:
-          get(raw,'P:ISBN'),
-
-        /*
-         * Normalised SWISH values
-         */
-        price:
-          csvNumber(get(raw,'Current price')) ??
-          csvNumber(get(raw,'Start price')),
-
-        quantity:
-          csvNumber(get(raw,'Available quantity')) ?? 1,
-
-        category:
-          get(raw,'eBay category 1 name'),
-
-        category_id:
-          get(raw,'eBay category 1 number'),
-
-        marketplace:'ebay',
-        marketplace_id:'ebay',
-        listing_status:'active'
+  document.querySelector('#importCsv').onclick=async()=>{
+    const f=fileInput?.files?.[0];
+    if(!f)return toast('Choose a CSV/XLSX file',true);
+    const box=document.querySelector('#ebaySubBox');
+    try{
+      box.innerHTML='<div class="empty"><div class="spinner"></div><p>Reading the eBay export and preparing the proven category mapâ¦</p></div>';
+      const rows=S.cache.ebayImportRows?.length?S.cache.ebayImportRows:(await readEbayImportFile(f)).map(normaliseEbayCsvRow);
+      const categories=S.cache.provenCategories?.length?S.cache.provenCategories:buildProvenCategories(rows.map(x=>x.raw));
+      renderProvenCategories(categories);
+      let url='';
+      const path=`imports/${Date.now()}_${f.name}`;
+      const up=await sb.storage.from('imports').upload(path,f,{upsert:true});
+      if(up.error)throw up.error;
+      url=sb.storage.from('imports').getPublicUrl(path).data.publicUrl;
+      const payload={
+        type:document.querySelector('#impType').value,
+        csv_url:url,
+        filename:f.name,
+        tenant_id:S.tenant?.id,
+        tenantId:S.tenant?.id,
+        marketplace_id:'EBAY_GB',
+        marketplaceId:'EBAY_GB',
+        csv_rows:rows,
+        normalized_rows:rows.map(({raw,...x})=>x),
+        proven_categories:categories
       };
-
-    })
-    .filter(r=>r.ebay_item_id || r.sku || r.title);
-
-  const currencies =
-    [...new Set(rows.map(r=>r.currency).filter(Boolean))];
-
-  return {
-    delimiter,
-    headers,
-    rows,
-    currencies
+      const d=await edge(SWISH.functions.ebayImport,payload);
+      box.innerHTML=`<div class="success"><b>eBay import completed/triggered.</b><p>${rows.length} CSV rows supplied to the existing eBay import function, including verified eBay category IDs and names.</p><p class="muted">No new table or database was created.</p><pre class="pre">${esc(JSON.stringify(d,null,2))}</pre></div>`;
+      toast('eBay CSV import submitted');
+    }catch(e){box.innerHTML=`<div class="error"><b>eBay CSV import failed.</b><br>${esc(e.message)}<p class="muted">No replacement database or frontend-only fake inventory has been created.</p></div>`}
+  };
+  document.querySelector('#exportCsv').onclick=async()=>{
+    try{
+      const d=await edge(SWISH.functions.ebayExport,{type:document.querySelector('#impType').value,tenant_id:S.tenant?.id,tenantId:S.tenant?.id});
+      if(d?.url)window.open(d.url,'_blank');else toast('Export triggered');
+    }catch(e){toast(e.message,true)}
   };
 }
-
-
-function renderEbayCsvPreview(parsed,file){
-
-  const box = document.querySelector('#ebaySubBox');
-
-  if(!box) return;
-
-  const rows = parsed.rows;
-
-  const priced =
-    rows.filter(r=>Number.isFinite(Number(r.price)));
-
-  const categories =
-    rows.filter(r=>r.ebay_category_1_id);
-
-  const skus =
-    rows.filter(r=>r.sku);
-
-  const totalValue =
-    priced.reduce((sum,r)=>sum+Number(r.price||0),0);
-
-  const sample = rows.slice(0,25);
-
-  box.innerHTML = `
-
-    <div class="card">
-
-      <div class="toolbar">
-
-        <div>
-          <h3 style="margin:0">CSV ready to import</h3>
-          <div class="muted">${esc(file.name)}</div>
-        </div>
-
-        <span class="tag">${rows.length} rows</span>
-
-      </div>
-
-      <div class="grid">
-
-        <div class="card metric">
-          <span class="muted">Listings</span>
-          <b>${rows.length}</b>
-        </div>
-
-        <div class="card metric">
-          <span class="muted">SKUs</span>
-          <b>${skus.length}</b>
-        </div>
-
-        <div class="card metric">
-          <span class="muted">eBay categories</span>
-          <b>${categories.length}</b>
-        </div>
-
-        <div class="card metric">
-          <span class="muted">Listed value</span>
-          <b>${money(totalValue)}</b>
-        </div>
-
-      </div>
-
-      <div style="margin-top:16px">
-
-        <h3>eBay → SWISH mapping</h3>
-
-        <div class="table-wrap">
-
-          <table class="tbl">
-
-            <thead>
-              <tr>
-                <th>eBay field</th>
-                <th>SWISH field</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              <tr>
-                <td>Item number</td>
-                <td>eBay Item ID / external listing ID</td>
-              </tr>
-
-              <tr>
-                <td>Title</td>
-                <td>title / canonical_title</td>
-              </tr>
-
-              <tr>
-                <td>Custom label (SKU)</td>
-                <td>sku</td>
-              </tr>
-
-              <tr>
-                <td>Current price</td>
-                <td>price / expected selling price</td>
-              </tr>
-
-              <tr>
-                <td>Available quantity</td>
-                <td>quantity</td>
-              </tr>
-
-              <tr>
-                <td>eBay category 1 name/number</td>
-                <td>eBay category name/ID</td>
-              </tr>
-
-              <tr>
-                <td>Condition</td>
-                <td>condition</td>
-              </tr>
-
-              <tr>
-                <td>Listing site</td>
-                <td>marketplace/site</td>
-              </tr>
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </div>
-
-      <div style="margin-top:16px">
-
-        <h3>Preview — first ${Math.min(25,rows.length)} listings</h3>
-
-        <div class="table-wrap">
-
-          <table class="tbl">
-
-            <thead>
-
-              <tr>
-                <th>eBay ID</th>
-                <th>SKU</th>
-                <th>Title</th>
-                <th>Category</th>
-                <th>Price</th>
-              </tr>
-
-            </thead>
-
-            <tbody>
-
-              ${sample.map(r=>`
-
-                <tr>
-
-                  <td>${esc(r.ebay_item_id)}</td>
-
-                  <td>${esc(r.sku)}</td>
-
-                  <td>${esc(r.title)}</td>
-
-                  <td>
-                    ${esc(r.ebay_category_1_name || '—')}
-                    ${r.ebay_category_1_id ? ` · ${esc(r.ebay_category_1_id)}` : ''}
-                  </td>
-
-                  <td>${money(r.price)}</td>
-
-                </tr>
-
-              `).join('')}
-
-            </tbody>
-
-          </table>
-
-        </div>
-
-      </div>
-
-      <div class="card" style="margin-top:16px">
-
-        <b>Important</b>
-
-        <p class="muted">
-          Importing this CSV updates the existing SWISH/eBay inventory.
-          It must not create duplicates and must not wipe existing SWISH
-          images, descriptions, identification, valuation or learning data.
-        </p>
-
-        <div id="csvImportMsg"></div>
-
-      </div>
-
-    </div>`;
+async function loadLogs(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_logs',{limit:300,order:{column:'created_at',ascending:false}});b.innerHTML=rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.event||r.action||'eBay log')}</div><div class="muted">${datetime(r.created_at)} Â· ${esc(r.level||'info')}</div><pre class="pre">${esc(JSON.stringify(r,null,2))}</pre></div></div>`).join('')||'<div class="empty">No logs.</div>'}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+
+async function pageMore(){
+  replaceView(`<div class="card"><h2>SWISH tools</h2><div class="four">
+    ${[['acquisitions','Acquisitions'],['opportunities','Opportunities'],['review','Review required'],['audit','Audit'],['dispatch','Dispatch'],['repricing','Repricing'],['insights','Insights'],['money','Money'],['tasks','Tasks'],['command','Command Centre'],['settings','Settings']].map(x=>`<button class="btn" data-more="${x[0]}">${x[1]}</button>`).join('')}
+  </div><div class="toolbar" style="margin-top:12px"><button class="btn bad" id="signout">Sign out</button></div></div>`);
+  document.querySelectorAll('[data-more]').forEach(b=>b.onclick=(e)=>{e.preventDefault();go(b.dataset.more)});
+  document.querySelector('#signout').onclick=async()=>{await sb.auth.signOut();S.user=null;renderLogin()};
 }
-
-
-PATCH 4 — EXPECTED BACKEND BEHAVIOUR
--------------------------------------
-
-The existing `ebay-import-csv` Edge Function should accept:
-
-{
-  type: "listings",
-  tenantId,
-  tenant_id,
-  filename,
-  csv_url,
-  rows,
-  source: "ebay_active_listings_csv",
-  mapping,
-  match_priority: ["ebay_item_id","sku"],
-  preserve_existing_fields: [...],
-  prevent_duplicates: true
+async function genericCrudPage(title,tableName,fields){
+  replaceView(`<div class="card"><h2>${title}</h2><div class="toolbar"><button class="btn primary" id="refreshGeneric">Refresh</button><button class="btn" id="newGeneric">New</button></div><div id="genericBox"></div></div>`);
+  document.querySelector('#refreshGeneric').onclick=()=>genericCrudPage(title,tableName,fields);
+  document.querySelector('#newGeneric').onclick=async()=>{const row={};fields.forEach(f=>row[f]=prompt(f.replace(/_/g,' '))||'');try{await insert(tableName,row);toast('Created');genericCrudPage(title,tableName,fields)}catch(e){toast(e.message,true)}};
+  try{const rows=await safeTable(tableName,{limit:500,order:{column:'created_at',ascending:false}});document.querySelector('#genericBox').innerHTML=tableHTML(rows,fields)}catch(e){document.querySelector('#genericBox').innerHTML=`<div class="error">${esc(e.message)}</div>`}
 }
-
-For each CSV row:
-
-A. Match by existing eBay Item ID first.
-
-B. If no Item ID match, match by SKU.
-
-C. If a match exists:
-   UPDATE the existing record.
-
-D. If no match exists:
-   INSERT one inventory/listing record using the existing SWISH schema.
-
-E. Never create a second database/table.
-
-F. Do not overwrite these existing SWISH fields with empty CSV values:
-   - images
-   - media
-   - image_urls
-   - description
-   - identification_data
-   - identification_confidence
-   - attributes
-   - valuation_low
-   - valuation_mid
-   - valuation_high
-   - valuation_confidence
-   - expected_selling_price
-   - expected_profit
-
-G. Store the eBay category ID and name from:
-   eBay category 1 number
-   eBay category 1 name
-
-H. Store the original eBay Item number as the canonical external listing identifier.
-
-I. Keep Listing site = UK/eBay where present.
-
-J. Keep currency = GBP for this supplied export.
-
-K. Keep listing status = active.
-
-L. Return a result such as:
-
-{
-  "success": true,
-  "total": 206,
-  "inserted": 0,
-  "updated": 206,
-  "duplicates": 0,
-  "failed": 0,
-  "errors": []
+function pageAcquisitions(){return genericCrudPage('Acquisitions','acquisitions',['source','platform','total_cost','item_count','status','notes'])}
+function pageOpportunities(){return genericCrudPage('Opportunities','opportunities',['title','platform','buy_price','estimated_sell_price','margin','status'])}
+async function pageReview(){await genericReview('Review Required','inventory')}
+async function genericReview(title,name){const rows=await safeTable(name,{limit:500});const r=rows.filter(x=>x.status==='review'||Number(x.confidence??x.identification_confidence??0)<.65);replaceView(`<div class="card"><h2>${title}</h2>${r.length?r.map(x=>`<div class="row"><div class="grow"><div class="title">${esc(x.title||x.canonical_title||x.sku||x.id)}</div><div class="muted">${esc(x.notes||'Needs attention')}</div></div><button class="btn primary" data-review="${esc(x.id)}">Identify</button></div>`).join(''):'<div class="empty">Nothing requires review.</div>'}</div>`);document.querySelectorAll('[data-review]').forEach(b=>b.onclick=async()=>{try{await edgeAny([SWISH.functions.identify,'swish-identify'],{item_id:b.dataset.review});toast('Re-identification triggered')}catch(e){toast(e.message,true)}})}
+function pageAudit(){return genericCrudPage('Audit','audit_log',['action','entity_type','entity_id','created_at'])}
+function pageDispatch(){return genericCrudPage('Dispatch','orders',['external_order_id','buyer_name','status','dispatch_by','tracking_number','carrier'])}
+function pageRepricing(){return genericCrudPage('Repricing','listings',['title','platform','price','suggested_price','status'])}
+async function pageInsights(){const [inv,orders]=await Promise.all([safeTable('inventory',{limit:1000}),safeTable('orders',{limit:1000})]);replaceView(`<div class="card"><h2>Insights</h2><div class="grid"><div class="card metric"><span class="muted">Inventory</span><b>${inv.length}</b></div><div class="card metric"><span class="muted">Orders</span><b>${orders.length}</b></div><div class="card metric"><span class="muted">Inventory value</span><b>${money(inv.reduce((s,x)=>s+Number(x.expected_selling_price||x.valuation_mid||x.valuation||0),0))}</b></div><div class="card metric"><span class="muted">Sales</span><b>${money(orders.reduce((s,x)=>s+Number(x.total_amount||x.sale_price||0),0))}</b></div></div></div>`)}
+async function pageMoney(){let summary=null;try{summary=await edge(SWISH.functions.ebayFinanceSummary,{})}catch(e){}const [fees,orders,payouts]=await Promise.all([safeTable('fees',{limit:500}),safeTable('orders',{limit:500}),safeTable('payouts',{limit:500})]);replaceView(`<div class="card"><h2>Money</h2><pre class="pre">${esc(JSON.stringify(summary,null,2))}</pre><div class="grid"><div class="card metric"><span class="muted">Orders</span><b>${money(orders.reduce((s,x)=>s+Number(x.total_amount||x.total||0),0))}</b></div><div class="card metric"><span class="muted">Fees</span><b>${money(fees.reduce((s,x)=>s+Number(x.amount||x.fee_amount||0),0))}</b></div><div class="card metric"><span class="muted">Payouts</span><b>${money(payouts.reduce((s,x)=>s+Number(x.amount||0),0))}</b></div></div></div>`)}
+async function pageTasks(){const rows=await safeTable('tasks',{limit:500,order:{column:'created_at',ascending:false}});replaceView(`<div class="card"><h2>Tasks</h2><div class="toolbar"><button class="btn primary" id="newTask">New task</button></div>${rows.map(t=>`<div class="row"><button class="btn" data-task="${esc(t.id)}">${t.status==='completed'?'â':'â'}</button><div class="grow"><div class="title">${esc(t.title)}</div><div class="muted">${esc(t.priority||'medium')} Â· ${date(t.due_date)}</div></div></div>`).join('')||'<div class="empty">No tasks.</div>'}</div>`);const newTask=document.querySelector('#newTask'); if(newTask)newTask.onclick=async()=>{const title=prompt('Task title');if(!title)return;try{await insert('tasks',{title,status:'open',priority:'medium'});toast('Task created');pageTasks()}catch(e){toast(e.message,true)}};document.querySelectorAll('[data-task]').forEach(b=>b.onclick=async()=>{const t=rows.find(x=>x.id===b.dataset.task);try{await update('tasks',t.id,{status:t.status==='completed'?'open':'completed',completed_at:t.status==='completed'?null:new Date().toISOString()});pageTasks()}catch(e){toast(e.message,true)}})}
+async function pageCommand(){const inv=await safeTable('inventory',{limit:1000});replaceView(`<div class="card"><h2>Command Centre</h2><div class="grid"><div class="card metric"><span class="muted">Inventory</span><b>${inv.length}</b></div><div class="card metric"><span class="muted">Backend</span><b>ONLINE</b></div></div><div class="toolbar"><button class="btn primary" id="cmdSync">Sync inventory</button><button class="btn" id="cmdOrders">Sync orders</button><button class="btn" id="cmdListings">Sync listings</button><button class="btn" id="cmdIdentify">Batch identify</button><button class="btn" id="cmdReprice">Reprice all</button></div>
+    <div class="card"><h3>AI / Learning Engine controls</h3><p class="muted">These buttons call the existing SWISH specialist/learning layers. They do not contain an AI provider key in the browser.</p>
+      <div class="toolbar"><input id="engineItem" placeholder="Existing inventory item ID"><button class="btn primary" id="engReId">Identify / Re-ID</button><button class="btn" id="engIslamic">Islamic / Countermark</button><button class="btn" id="engValue">Market value</button><button class="btn" id="engDecompose">Decompose</button></div>
+    </div><div id="cmdOut"></div></div>`);
+  const gof=(f,p,msg)=>runAction(f,p,msg,'cmdOut');
+  document.querySelector('#cmdSync').onclick=()=>gof('sync-inventory',{tenantId:S.tenant?.id},'Inventory sync complete');
+  document.querySelector('#cmdOrders').onclick=()=>gof('sync-orders',{tenantId:S.tenant?.id},'Order sync complete');
+  document.querySelector('#cmdListings').onclick=()=>gof('sync-listings',{tenantId:S.tenant?.id},'Listing sync complete');
+  document.querySelector('#cmdIdentify').onclick=()=>gof('batch-identify',{tenantId:S.tenant?.id},'Batch identification triggered');
+  document.querySelector('#cmdReprice').onclick=()=>gof(SWISH.functions.repriceAll,{},'Bulk repricing triggered');
+  const runEngineById=async(kind)=>{
+    const id=document.querySelector('#engineItem').value.trim();if(!id)return toast('Enter an inventory item ID',true);
+    try{
+      const item=await table('inventory',{eq:{id},single:true});const urls=arr(item.media).filter(u=>/^https?:/i.test(u));
+      let names,payload;
+      if(kind==='identify'){names=[SWISH.functions.identify,'swish-identify'];payload={tenant_id:S.tenant?.id,item_id:id,tenantId:S.tenant?.id,itemId:id,existingImageUrls:urls,specialistId:item.specialist_id||'curiosities_collectibles',knownAttributes:item.attributes||{}}}
+      if(kind==='islamic'){names=[SWISH.functions.islamic];payload={tenant_id:S.tenant?.id,item_id:id,tenantId:S.tenant?.id,itemId:id,existingImageUrls:urls,knownAttributes:item.attributes||{}}}
+      if(kind==='value'){names=[SWISH.functions.value,SWISH.functions.marketValue];payload={tenant_id:S.tenant?.id,item_id:id,tenantId:S.tenant?.id,itemId:id,title:item.title||item.canonical_title||'Unknown item',specialistId:item.specialist_id||'curiosities_collectibles',attributes:item.attributes||{},condition:item.condition||'',identificationConfidence:Number(item.identification_confidence??item.confidence??0),identificationTier:Number(item.identification_confidence??item.confidence??0)>=.85?'high':Number(item.identification_confidence??item.confidence??0)>=.65?'medium':'low',numistaTypeId:item.attributes?.numista_type_id?Number(item.attributes.numista_type_id):null,numistaMatchScore:Number(item.attributes?.numista_match_score||0),numistaMatchTier:item.attributes?.numista_status||'no_match',applyToItem:false}}
+      if(kind==='decompose'){names=[SWISH.functions.decompose];payload={tenant_id:S.tenant?.id,item_id:id,tenantId:S.tenant?.id,itemId:id,existingImageUrls:urls,knownAttributes:item.attributes||{}}}
+      const d=await edgeAny(names,payload);document.querySelector('#cmdOut').innerHTML=`<div class="success">AI engine complete.<pre class="pre">${esc(JSON.stringify(d,null,2))}</pre></div>`;
+    }catch(e){document.querySelector('#cmdOut').innerHTML=`<div class="error">${esc(e.message)}</div>`}
+  };
+  document.querySelector('#engReId').onclick=()=>runEngineById('identify');
+  document.querySelector('#engIslamic').onclick=()=>runEngineById('islamic');
+  document.querySelector('#engValue').onclick=()=>runEngineById('value');
+  document.querySelector('#engDecompose').onclick=()=>runEngineById('decompose');
 }
+async function pageSettings(){const p=S.user?await table('profiles',{eq:{id:S.user.id},single:true}).catch(()=>({})):{};replaceView(`<div class="card"><h2>Settings</h2><div class="two"><div><label class="muted">Email</label><input value="${esc(S.user?.email||'')}" disabled></div><div><label class="muted">Full name</label><input id="profName" value="${esc(p?.full_name||'')}"></div><div><label class="muted">Phone</label><input id="profPhone" value="${esc(p?.phone||'')}"></div><div><label class="muted">Timezone</label><select id="profTZ"><option>Europe/London</option><option>Europe/Paris</option><option>America/New_York</option></select></div></div><div class="toolbar" style="margin-top:12px"><button class="btn primary" id="saveProf">Save profile</button></div></div>`);document.querySelector('#saveProf').onclick=async()=>{try{await sb.from('profiles').upsert({...(p||{}),id:S.user.id,full_name:document.querySelector('#profName').value,phone:document.querySelector('#profPhone').value,timezone:document.querySelector('#profTZ').value});toast('Profile saved')}catch(e){toast(e.message,true)}}}
 
-The actual counts will depend on the current SWISH database.
-
-IMPORTANT SECURITY NOTE
------------------------
-
-The CSV importer must never expose:
-- eBay client secret
-- eBay access token
-- eBay refresh token
-
-Those remain in the existing server-side connector/Edge Function system.
-
-The browser only uploads the CSV and calls the existing backend.
-
-END OF PATCH
-
-
-PATCH 5 — PROVEN eBAY CATEGORY LIBRARY
-----------------------------------------
-
-This is the important extra part.
-
-The supplied 206-row CSV contains 53 distinct Category 1 ID/name pairs.
-The importer already captures:
-
-  ebay_category_1_id
-  ebay_category_1_name
-  category_id
-  category
-
-The following addition makes SWISH automatically build a "Proven eBay
-Categories" library from the categories already stored in the EXISTING
-inventory and eBay listings data.
-
-NO NEW TABLE IS REQUIRED.
-
-It means categories coming from your real eBay CSV become reusable,
-evidence-based category choices inside SWISH.
-
-ADD THIS FUNCTION anywhere before `loadCategoryManager()`:
-
-async function getProvenEbayCategories(){
-
-  const inventory = await safeTable('inventory',{limit:5000});
-  const listings = await safeTable('ebay_listings',{limit:5000});
-
-  const all = [...inventory,...listings];
-  const map = new Map();
-
-  for(const row of all){
-
-    const a = obj(row.attributes || row.identification_data || {});
-
-    const id =
-      row.ebay_category_id ||
-      row.category_id ||
-      row.ebay_categoryId ||
-      a.ebay_category_id ||
-      a.category_id ||
-      '';
-
-    const name =
-      row.ebay_category_name ||
-      row.category_name ||
-      row.category ||
-      a.ebay_category_name ||
-      a.category_name ||
-      '';
-
-    if(!id) continue;
-
-    const key = String(id).trim();
-
-    if(!map.has(key)){
-      map.set(key,{
-        id:key,
-        name:String(name || '').trim(),
-        count:0
-      });
-    }
-
-    const item = map.get(key);
-
-    item.count++;
-
-    if(!item.name && name){
-      item.name = String(name).trim();
-    }
-  }
-
-  return [...map.values()].sort((a,b)=>{
-
-    if(b.count !== a.count){
-      return b.count-a.count;
-    }
-
-    return String(a.name).localeCompare(String(b.name));
-  });
+async function runAction(fnKey,payload,msg,target){
+  const fn=SWISH.functions[fnKey]||fnKey;const el=document.querySelector('#'+target);if(el)el.innerHTML='<div class="empty"><div class="spinner"></div>Workingâ¦</div>';
+  try{const d=await edge(fn,payload);if(el)el.innerHTML=`<div class="success">${esc(msg)}<pre class="pre">${esc(JSON.stringify(d,null,2))}</pre></div>`;else toast(msg);return d}catch(e){if(el)el.innerHTML=`<div class="error">${esc(e.message)}</div>`;else toast(e.message,true)}
 }
+async function runEdgeToast(fn,payload,msg){try{const d=await edge(fn,payload);toast(msg);return d}catch(e){toast(e.message,true)}}
 
-
-ADD THIS FUNCTION immediately after it:
-
-async function renderProvenEbayCategories(){
-
-  const box = document.querySelector('#provenCatBox');
-
-  if(!box) return;
-
-  try{
-
-    const cats = await getProvenEbayCategories();
-
-    if(!cats.length){
-
-      box.innerHTML =
-        '<div class="empty">No proven eBay categories stored yet. ' +
-        'Import your eBay Active Listings CSV first.</div>';
-
-      return;
-    }
-
-    box.innerHTML = `
-
-      <div class="card">
-
-        <div class="toolbar">
-
-          <div class="grow">
-            <h3 style="margin:0">Proven eBay Categories</h3>
-            <div class="muted">
-              These category IDs have been supplied by real eBay listings
-              already stored in SWISH. They are not AI guesses.
-            </div>
-          </div>
-
-          <span class="tag">${cats.length} proven IDs</span>
-
-        </div>
-
-        <div style="margin-top:10px">
-          <input
-            id="provenCatSearch"
-            placeholder="Search proven category name or ID"
-            style="width:100%"
-          >
-        </div>
-
-        <div id="provenCatRows" style="margin-top:10px"></div>
-
-      </div>`;
-
-    const render = (term='') => {
-
-      const q = String(term||'').toLowerCase().trim();
-
-      const filtered = cats.filter(c =>
-        !q ||
-        String(c.id).toLowerCase().includes(q) ||
-        String(c.name).toLowerCase().includes(q)
-      );
-
-      const rows = filtered.slice(0,100);
-
-      document.querySelector('#provenCatRows').innerHTML =
-        rows.length
-        ? rows.map(c=>`
-
-          <div class="row">
-
-            <div class="grow">
-
-              <div class="title">
-                ${esc(c.name || 'Unnamed eBay category')}
-              </div>
-
-              <div class="muted">
-                eBay Category ID: <b>${esc(c.id)}</b>
-                · used by ${c.count} stored listing${c.count===1?'':'s'}
-              </div>
-
-            </div>
-
-            <button
-              class="btn"
-              data-copy-category="${esc(c.id)}"
-              data-category-name="${esc(c.name)}">
-              Copy ID
-            </button>
-
-          </div>
-
-        `).join('')
-        : '<div class="empty">No matching proven categories.</div>';
-
-      document.querySelectorAll('[data-copy-category]').forEach(btn=>{
-
-        btn.onclick = async () => {
-
-          const id = btn.dataset.copyCategory || '';
-          const name = btn.dataset.categoryName || '';
-
-          try{
-            await navigator.clipboard.writeText(id);
-            toast(`Copied eBay Category ${id} · ${name}`);
-          }catch(_){
-            prompt('eBay Category ID',id);
-          }
-
-        };
-
-      });
-
-    };
-
-    render('');
-
-    document.querySelector('#provenCatSearch').oninput =
-      e => render(e.target.value);
-
-  }catch(e){
-
-    box.innerHTML =
-      `<div class="error">
-        Could not build proven category library.<br>
-        ${esc(e.message)}
-      </div>`;
-
-  }
+async function init(){
+  S.page=currentHashPage();
+  const {data:{session}}=await sb.auth.getSession();S.user=session?.user||null;
+  if(!S.user){renderLogin();return;}
+  await loadContext();render();
+  sb.auth.onAuthStateChange(async(_event,session)=>{S.user=session?.user||null;if(!S.user)renderLogin();else{await loadContext();render();}});
 }
-
-
-CHANGE the `loadCategoryManager()` HTML so it contains:
-
-<div id="provenCatBox"></div>
-
-Place it above the existing:
-
-<div id="catBox">...</div>
-
-Then, at the end of `loadCategoryManager()`, after:
-
-await loadCategoryChoices();
-
-ADD:
-
-await renderProvenEbayCategories();
-
-
-RESULT:
-
-The Category Manager will show:
-
-  Proven eBay Categories
-  ├── category name
-  ├── real eBay category ID
-  ├── number of SWISH listings using it
-  └── Copy ID
-
-This library is derived from the existing SWISH database, so it does not
-introduce another database or table.
-
-
-PATCH 6 — SAVE CATEGORY DATA DURING CSV IMPORT
------------------------------------------------
-
-The existing CSV parser already creates:
-
-  ebay_category_1_id
-  ebay_category_1_name
-  ebay_category_2_id
-  ebay_category_2_name
-  category_id
-  category
-
-Keep all of those fields in the `rows` payload.
-
-The existing `ebay-import-csv` Edge Function should map Category 1 into
-the existing SWISH category fields:
-
-  ebay_category_id
-  ebay_category_name
-  category_id
-  category
-
-If the existing schema supports the secondary category fields, also
-preserve:
-
-  ebay_category_2_id
-  ebay_category_2_name
-
-Do NOT create a new category table.
-
-The important rule is:
-
-CSV Category 1 ID → existing SWISH category ID field
-
-CSV Category 1 Name → existing SWISH category name field
-
-
-PATCH 7 — OPTIONAL FRONTEND SAFETY FOR CATEGORY ASSIGNMENT
-------------------------------------------------------------
-
-When `openCategoryEditor()` displays its category search/editor, add a
-"Proven categories" section using:
-
-const proven = await getProvenEbayCategories();
-
-Then display the most frequently used proven categories first.
-
-Each category should show:
-
-  Name
-  ID
-  Use this category
-
-The "Use this category" button should populate the existing category ID
-and category name inputs in the editor.
-
-Do NOT replace the existing live eBay taxonomy search.
-
-The order should be:
-
-1. Proven categories from the user's own eBay data
-2. Existing live eBay taxonomy/category search
-3. Manual ID/name entry as the fallback
-
-This means SWISH can use a known-good category immediately, while still
-allowing a new eBay category to be searched when required.
-
-
-PATCH 8 — PROVEN CATEGORY DATA FROM THE CURRENT CSV
------------------------------------------------------
-
-For reference, the supplied 206-row eBay CSV contains these 53 distinct
-Category 1 IDs/names:
-
- 51 listings |     534 | Asia
- 20 listings |    4738 | Greek
- 12 listings |  122472 | Roman Imperial (235-476AD)
- 11 listings |    4735 | Roman Provincial
- 11 listings |    4737 | Persian, Indian
-  9 listings |     539 | France
-  6 listings |   58531 | Channel Islands
-  6 listings |     533 | Africa
-  5 listings |    4734 | Roman Republican (c.300-27 BC)
-  5 listings |   45153 | Hungary
-  4 listings |     542 | Latin America/Caribbean
-  4 listings |   39480 | Italy
-  4 listings |    3455 | 18th Century
-  4 listings |    4739 | Islamic
-  3 listings |    3365 | Roman Imperial (96-235AD)
-  3 listings |     540 | Germany
-  3 listings |    4941 | Other European Coins
-  3 listings |   39481 | Spain
-  2 listings |   39479 | Austria
-  2 listings |  122471 | Roman Imperial (27BC-96AD)
-  2 listings |     548 | Publications
-  2 listings |   29223 | Antiquarian & Collectable
-  2 listings |   75338 | Isle of Man
-  2 listings |   72040 | Malta
-  2 listings |   45157 | Portugal
-  1 listings |  141097 | Shilling
-  1 listings |     553 | Art Sculptures
-  1 listings |    3356 | 2, 3 & 20 Cents
-  1 listings |   79964 | Other British Coins
-  1 listings |   33564 | Brake Disc Rotors
-  1 listings |   42284 | Sanders
-  1 listings |   57357 | Brake Pads
-  1 listings |  261186 | Books
-  1 listings |    1350 | Codd, Patent & Mineral Bottles
-  1 listings |   22679 | Bike Frames
-  1 listings |   98764 | Threepence
-  1 listings |  141091 | Half-Penny
-  1 listings |  141165 | 20th Century
-  1 listings |   72385 | 19th Century
-  1 listings |   58532 | Middle East
-  1 listings |  101150 | Boer War (1899-1902)
-  1 listings |  141125 | Florin/Two Shillings
-  1 listings |   45152 | Greece
-  1 listings |   45159 | Turkey
-  1 listings |    4740 | Chinese
-  1 listings |   11951 | Nickels
-  1 listings |   58535 | European
-  1 listings |  122475 | Celtic Coins (c.100BC-c.100AD)
-  1 listings |   45154 | Netherlands
-  1 listings |  141123 | Sixpence
-  1 listings |  141121 | Threepence
-  1 listings |     536 | Canada
-  1 listings |   72384 | 17th Century
-
-
-These are examples of the kind of proven data SWISH will learn from.
-The importer must NOT hard-code these 53 categories as a permanent
-database list. They are shown here only as verification of the supplied
-CSV.
-
-The actual application should derive the library dynamically from
-existing imported eBay/inventory records.
-
-PATCH 9 — IMPORTANT IMPORT RULES
----------------------------------
-
-The finished importer must behave like this:
-
-eBay CSV
-   ↓
-Parse locally
-   ↓
-Read Item number + SKU + Category ID/Name
-   ↓
-Send normalised rows to existing `ebay-import-csv`
-   ↓
-Match existing eBay Item ID
-   ↓
-If no match, match SKU
-   ↓
-Update existing record OR insert once
-   ↓
-Preserve existing SWISH images / descriptions / identification /
-valuation / learning data
-   ↓
-Store proven eBay category ID + name
-   ↓
-Category Manager derives its Proven Category Library from those records
-
-Do NOT:
-
-- create another database
-- create another Supabase project
-- create another inventory table
-- create another authentication system
-- invent category IDs
-- replace the existing eBay taxonomy search
-- overwrite existing AI identification merely because a CSV row lacks it
-- overwrite existing images merely because a CSV row lacks image URLs
-- expose eBay credentials in the browser
-- change the existing eBay OAuth architecture
-- change Simple Delivery requirements
-
-The CSV is the source of truth for eBay listing/category information,
-while the existing SWISH database remains the canonical application
-database.
+window.addEventListener('load',init);
