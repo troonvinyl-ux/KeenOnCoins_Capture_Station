@@ -659,6 +659,119 @@ function categorySummaryHtml(stats){
   return `<div class="card" style="margin-top:12px"><h3>Proven eBay Categories</h3><p class="muted">Read directly from the eBay Category ID/name columns in the imported file. No new category table was created.</p><div class="table-wrap"><table class="tbl"><thead><tr><th>eBay category</th><th>ID</th><th>Uses</th></tr></thead><tbody>${cats.slice(0,50).map(([k,n])=>{const [id,name]=k.split('|');return `<tr><td>${esc(name||'')}</td><td>${esc(id||'')}</td><td>${n}</td></tr>`}).join('')}</tbody></table></div></div>`;
 }
 
+async function importEbayRowsViaBackend(rows,type,filename){
+  /*
+   * IMPORTANT:
+   * Do NOT write directly to the SWISH inventory table from GitHub.
+   * The existing SWISH architecture expects eBay imports to be handled
+   * server-side by the existing ebay-import-csv Edge Function.
+   * Direct browser INSERT/UPDATE requests were producing Safari/Fetch
+   * "TypeError: Load failed" for every row.
+   */
+  const normalized=rows.map(x=>({
+    ebay_item_id:x.itemId||'',
+    item_number:x.itemId||'',
+    title:x.title||'',
+    sku:x.sku||'',
+    quantity:x.quantity,
+    format:pick(x.raw,['Format'])||'',
+    currency:pick(x.raw,['Currency'])||'GBP',
+    start_price:num(pick(x.raw,['Start price'])),
+    buy_it_now_price:num(pick(x.raw,['Auction Buy It Now price','Buy It Now price'])),
+    current_price:x.price,
+    price:x.price,
+    sold_quantity:num(pick(x.raw,['Sold quantity'])),
+    watchers:num(pick(x.raw,['Watchers'])),
+    bids:num(pick(x.raw,['Bids'])),
+    start_date:pick(x.raw,['Start date'])||'',
+    end_date:pick(x.raw,['End date'])||'',
+    ebay_category_1_name:x.categoryName||'',
+    ebay_category_1_id:x.categoryId||'',
+    category_1_name:x.categoryName||'',
+    category_1_id:x.categoryId||'',
+    ebay_category_2_name:pick(x.raw,['eBay category 2 name','Category 2 name'])||'',
+    ebay_category_2_id:pick(x.raw,['eBay category 2 number','eBay category 2 ID','Category 2 ID'])||'',
+    condition:x.condition||'',
+    epid:pick(x.raw,['eBay Product ID(ePID)','ePID'])||'',
+    listing_site:pick(x.raw,['Listing site'])||'UK',
+    upc:pick(x.raw,['P:UPC'])||'',
+    ean:pick(x.raw,['P:EAN'])||'',
+    isbn:pick(x.raw,['P:ISBN'])||'',
+    description:x.description||'',
+    image_urls:x.images||[],
+    status:x.status||'active'
+  }));
+
+  const chunks=[];
+  for(let i=0;i<normalized.length;i+=50)chunks.push(normalized.slice(i,i+50));
+  const total={success:true,total:normalized.length,inserted:0,created:0,updated:0,duplicates:0,failed:0,errors:[],chunks:0};
+
+  for(const chunk of chunks){
+    const payload={
+      type:type==='inventory'?'listings':type,
+      tenantId:S.tenant?.id,
+      tenant_id:S.tenant?.id,
+      filename,
+      csv_url:null,
+      rows:chunk,
+      normalized_rows:chunk,
+      source:'ebay_active_listings_csv',
+      mapping:{
+        ebay_item_id:'Item number',
+        title:'Title',
+        sku:'Custom label (SKU)',
+        quantity:'Available quantity',
+        format:'Format',
+        currency:'Currency',
+        start_price:'Start price',
+        buy_it_now_price:'Auction Buy It Now price',
+        current_price:'Current price',
+        sold_quantity:'Sold quantity',
+        watchers:'Watchers',
+        bids:'Bids',
+        start_date:'Start date',
+        end_date:'End date',
+        category_1_name:'eBay category 1 name',
+        category_1_id:'eBay category 1 number',
+        category_2_name:'eBay category 2 name',
+        category_2_id:'eBay category 2 number',
+        condition:'Condition',
+        epid:'eBay Product ID(ePID)',
+        listing_site:'Listing site',
+        upc:'P:UPC',
+        ean:'P:EAN',
+        isbn:'P:ISBN'
+      },
+      match_priority:['ebay_item_id','sku'],
+      preserve_existing_fields:[
+        'images','media','image_urls','description',
+        'identification_data','identification_confidence','attributes',
+        'valuation_low','valuation_mid','valuation_high','valuation_confidence',
+        'expected_selling_price','expected_profit'
+      ],
+      prevent_duplicates:true
+    };
+
+    try{
+      const d=await edge(SWISH.functions.ebayImport,payload);
+      total.chunks++;
+      total.inserted+=Number(d?.inserted??d?.created??d?.created_count??0)||0;
+      total.created+=Number(d?.created??0)||0;
+      total.updated+=Number(d?.updated??d?.updated_count??0)||0;
+      total.duplicates+=Number(d?.duplicates??d?.duplicate_count??0)||0;
+      total.failed+=Number(d?.failed??d?.failed_count??0)||0;
+      const errs=Array.isArray(d?.errors)?d.errors:Array.isArray(d?.failures)?d.failures:[];
+      if(errs.length)total.errors.push(...errs.slice(0,20-total.errors.length));
+    }catch(e){
+      /* Preserve the real backend error; never report a false import success. */
+      total.failed+=chunk.length;
+      if(total.errors.length<20)total.errors.push({chunk_start:total.chunks*50+1,error:e.message||String(e)});
+      throw new Error(`Existing ebay-import-csv backend rejected the import: ${e.message||String(e)}`);
+    }
+  }
+  return total;
+}
+
 async function bindImport(){
   document.querySelector('#importCsv').onclick=async()=>{
     const f=document.querySelector('#csvFile').files[0];
@@ -673,28 +786,41 @@ async function bindImport(){
       const sheet=wb.Sheets[wb.SheetNames[0]];
       const rows=XLSX.utils.sheet_to_json(sheet,{defval:'',raw:false});
       if(!rows.length)throw new Error('The selected file contains no data rows.');
+
       if(type==='listings'||type==='inventory'){
-        const stats=await importEbayRowsDirect(rows,type);
-        box.innerHTML=`<div class="success"><b>eBay import completed.</b><br>${stats.created} created Â· ${stats.updated} updated Â· ${stats.failed} failed Â· ${stats.read} rows read</div>
-          ${stats.failed?`<div class="error" style="margin-top:12px"><b>First failures</b><pre class="pre">${esc(JSON.stringify(stats.failures,null,2))}</pre></div>`:''}
-          ${categorySummaryHtml(stats)}`;
+        const parsed=rows.map(ebayCsvItem).filter(x=>x.itemId||x.title!=='Untitled eBay item');
+        if(!parsed.length)throw new Error('No usable eBay listing rows were found in the file.');
+
+        box.innerHTML=`<div class="empty"><div class="spinner"></div><p>Sending ${parsed.length} eBay listings to the existing SWISH backendâ¦</p><p class="muted">No browser-side inventory writes are being used.</p></div>`;
+        const stats=await importEbayRowsViaBackend(parsed,type,f.name);
+        box.innerHTML=`<div class="success"><b>eBay import completed.</b><br>${stats.created||stats.inserted||0} created Â· ${stats.updated||0} updated Â· ${stats.duplicates||0} duplicates Â· ${stats.failed||0} failed Â· ${parsed.length} rows read</div>
+          ${stats.errors?.length?`<div class="error" style="margin-top:12px"><b>Backend errors</b><pre class="pre">${esc(JSON.stringify(stats.errors,null,2))}</pre></div>`:''}
+          ${categorySummaryHtml({categories:Object.fromEntries(parsed.reduce((m,p)=>{if(p.categoryId||p.categoryName){const k=(p.categoryId||'')+'|'+(p.categoryName||'');m.set(k,(m.get(k)||0)+1)}return m},new Map()))})}`;
         await loadInventory();
         return;
       }
-      // Orders/categories still use the existing backend importer, but do not require the missing
-      // client-side "imports" storage bucket for listings/inventory.
-      const d=await edge(SWISH.functions.ebayImport,{type,csv_text:JSON.stringify(rows),filename:f.name,rows});
-      box.innerHTML=`<div class="success">Import triggered.<pre class="pre">${esc(JSON.stringify(d,null,2))}</pre></div>`;
+
+      /* Orders/categories continue through the existing server-side importer. */
+      const d=await edge(SWISH.functions.ebayImport,{
+        type,
+        csv_url:null,
+        filename:f.name,
+        tenant_id:S.tenant?.id,
+        tenantId:S.tenant?.id,
+        rows,
+        source:'ebay_csv'
+      });
+      box.innerHTML=`<div class="success">Import completed.<pre class="pre">${esc(JSON.stringify(d,null,2))}</pre></div>`;
     }catch(e){
-      box.innerHTML=`<div class="error"><b>eBay CSV import failed.</b><br>${esc(e.message||String(e))}<p class="muted">The browser no longer uploads to the missing <code>imports</code> storage bucket.</p></div>`;
+      box.innerHTML=`<div class="error"><b>eBay CSV import failed.</b><br>${esc(e.message||String(e))}<p class="muted">The importer now uses the existing SWISH <code>ebay-import-csv</code> Edge Function. It does not use the missing <code>imports</code> storage bucket and it does not write inventory directly from GitHub.</p></div>`;
     }
   };
   document.querySelector('#exportCsv').onclick=async()=>{
     try{
-      const d=await edge(SWISH.functions.ebayExport,{type:document.querySelector('#impType').value});
+      const d=await edge(SWISH.functions.ebayExport,{type:document.querySelector('#impType').value,tenant_id:S.tenant?.id,tenantId:S.tenant?.id});
       if(d?.url)window.open(d.url,'_blank');else toast('Export triggered');
     }catch(e){toast(e.message,true)}
-  }
+  };
 }
 async function loadLogs(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_logs',{limit:300,order:{column:'created_at',ascending:false}});b.innerHTML=rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.event||r.action||'eBay log')}</div><div class="muted">${datetime(r.created_at)} Â· ${esc(r.level||'info')}</div><pre class="pre">${esc(JSON.stringify(r,null,2))}</pre></div></div>`).join('')||'<div class="empty">No logs.</div>'}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
 
