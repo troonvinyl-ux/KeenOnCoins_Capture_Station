@@ -1,5 +1,5 @@
 
-/* SWISH GitHub flat web app
+/* SWISH GitHub flat web app — v5 canonical schema fix
    Existing OnSpace backend is canonical.
    No new database, no new Edge Functions, no third-party secret keys.
 */
@@ -18,7 +18,7 @@ const SWISH = {
     decompose:'swish-decompose',
     marketValue:'swish-market-value',
     generate:'swish-list-generate',
-    ebayAuth:'ebay-auth-url',
+    ebayAuth:null,
     ebaySync:'swish-ebay-sync',
     ebayListingsSync:'swish-ebay-sync',
     ebayOffer:'ebay-offer-action',
@@ -55,9 +55,9 @@ const S = {
 };
 
 const esc = v => String(v ?? '').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const money = v => Number.isFinite(Number(v)) ? 'Â£'+Number(v).toFixed(2) : 'â';
-const date = v => v ? new Date(v).toLocaleDateString('en-GB') : 'â';
-const datetime = v => v ? new Date(v).toLocaleString('en-GB') : 'â';
+const money = v => Number.isFinite(Number(v)) ? '£'+Number(v).toFixed(2) : '—';
+const date = v => v ? new Date(v).toLocaleDateString('en-GB') : '—';
+const datetime = v => v ? new Date(v).toLocaleString('en-GB') : '—';
 const arr = v => Array.isArray(v) ? v : [];
 const obj = v => v && typeof v==='object' ? v : {};
 const toast = (msg, bad=false) => {
@@ -132,21 +132,21 @@ async function loadContext(){
       const c=await table('marketplace_connectors',{select:'*',eq:{tenant_id:S.tenant.id,marketplace_id:'ebay'},limit:1});
       S.connector=c?.[0]||null;
     }
-    setConn(true,(S.connector?.status||'Connected')+' Â· eBay');
+    setConn(true,(S.connector?.status||'Connected')+' · eBay');
     return true;
-  } catch(e){ setConn(false,'Backend connected Â· tenant lookup failed'); return true; }
+  } catch(e){ setConn(false,'Backend connected · tenant lookup failed'); return true; }
 }
 
 function shell(content){
   const nav=[
-    ['dashboard','â Home'],['inventory','â« Inventory'],['identify','â Identify'],
-    ['listings','â£ Listings'],['orders','â¤ Orders'],['ebay','eBay'],['more','â¢â¢â¢ More']
+    ['dashboard','⌂ Home'],['inventory','◫ Inventory'],['identify','◉ Identify'],
+    ['listings','▣ Listings'],['orders','▤ Orders'],['ebay','eBay'],['more','••• More']
   ];
   document.querySelector('#app').innerHTML=`
     <div class="app"><main class="main">
       <div class="top">
-        <div><div class="brand">S<span>WISH</span></div><div class="status">KeenOnCoins Â· GitHub frontend Â· existing SWISH backend</div></div>
-        <div id="connection" class="conn"><span class="dot"></span>Connectingâ¦</div>
+        <div><div class="brand">S<span>WISH</span></div><div class="status">KeenOnCoins · GitHub frontend · existing SWISH backend</div></div>
+        <div id="connection" class="conn"><span class="dot"></span>Connecting…</div>
       </div>
       <div class="nav">${nav.map(([p,t])=>`<button type="button" class="${S.page===p?'active':''}" data-go="${p}">${t}</button>`).join('')}</div>
       <div id="view">${content}</div>
@@ -157,7 +157,7 @@ function shell(content){
   document.querySelectorAll('[data-go]').forEach(b=>{
     b.onclick=(e)=>{e.preventDefault();e.stopPropagation();go(b.dataset.go);};
   });
-  setConn(!!S.user,(S.connector?.status||'Connected')+' Â· eBay');
+  setConn(!!S.user,(S.connector?.status||'Connected')+' · eBay');
 }
 function go(p){
   S.page=p;
@@ -197,7 +197,7 @@ async function render(){
     audit:pageAudit,dispatch:pageDispatch,repricing:pageRepricing,insights:pageInsights,
     money:pageMoney,tasks:pageTasks,settings:pageSettings,command:pageCommand
   };
-  shell('<div class="empty">Loadingâ¦</div>');
+  shell('<div class="empty">Loading…</div>');
   try {
     const pageFn = pages[S.page] || pages.more;
     if (typeof pageFn === 'function') await pageFn();
@@ -223,7 +223,7 @@ function renderLogin(){
     <div id="loginErr"></div>
   </div></main>`;
   document.querySelector('#login').onclick=async()=>{
-    const er=document.querySelector('#loginErr');er.innerHTML='<div class="empty">Signing inâ¦</div>';
+    const er=document.querySelector('#loginErr');er.innerHTML='<div class="empty">Signing in…</div>';
     const {error}=await sb.auth.signInWithPassword({email:document.querySelector('#email').value,password:document.querySelector('#password').value});
     if(error)er.innerHTML=`<div class="error">${esc(error.message)}</div>`;else{await loadContext();render();}
   };
@@ -231,7 +231,7 @@ function renderLogin(){
 
 async function pageDashboard(){
   const [inv,ebayListings,orders,tasks]=await Promise.all([
-    safeTable('inventory',{limit:1000}),safeTable('ebay_listings',{limit:1000}),safeTable('orders',{limit:500}),safeTable('tasks',{limit:500})
+    safeTable('items',{limit:1000}),safeTable('listings',{limit:1000}),safeTable('orders',{limit:500}),safeTable('tasks',{limit:500})
   ]);
   const inventoryCount=inv.length||ebayListings.length;
   const awaiting=orders.filter(x=>['awaiting_dispatch','paid','processing'].includes(String(x.status)));
@@ -260,7 +260,7 @@ async function pageInventory(){
   replaceView(`<div class="card"><h2>Inventory</h2>
     <div class="toolbar"><input id="invSearch" placeholder="Search title / SKU"><button class="btn primary" id="invLoad">Search</button><button class="btn" id="invSync">eBay Sync</button></div>
     <div class="toolbar"><button class="btn" data-invfilter="all">All</button><button class="btn" data-invfilter="review">Needs review</button><button class="btn" data-invfilter="listed">Listed</button></div>
-    <div id="invBox"><div class="empty">Loading inventoryâ¦</div></div></div>`);
+    <div id="invBox"><div class="empty">Loading inventory…</div></div></div>`);
   document.querySelector('#invLoad').onclick=loadInventory;
   document.querySelector('#invSync').onclick=syncEbayInventory;
   document.querySelectorAll('[data-invfilter]').forEach(b=>b.onclick=()=>{S.sub=b.dataset.invfilter;loadInventory()});
@@ -268,7 +268,7 @@ async function pageInventory(){
 }
 async function syncEbayInventory(){
   const box=document.querySelector('#invBox');
-  if(box)box.innerHTML='<div class="empty"><div class="spinner"></div>Syncing eBay listingsâ¦</div>';
+  if(box)box.innerHTML='<div class="empty"><div class="spinner"></div>Syncing eBay listings…</div>';
   try{
     const d=await edge(SWISH.functions.ebayListingsSync,{tenantId:S.tenant?.id,tenant_id:S.tenant?.id,mode:'listings'});
     toast('eBay listings sync completed');
@@ -283,16 +283,23 @@ async function loadInventory(){
   const box=document.querySelector('#invBox');if(!box)return;
   try{
     const q=document.querySelector('#invSearch')?.value.trim()||'';
-    let rows=await safeTable('inventory',{limit:1000,order:{column:'created_at',ascending:false}});
-    // If the inventory table is empty, use the existing eBay listings table as the live eBay inventory source.
-    // This does not create a new table or backend.
-    if(!rows.length){
-      const listings=await safeTable('ebay_listings',{limit:1000,order:{column:'created_at',ascending:false}});
-      rows=listings.map(x=>({...x,id:x.inventory_item_id||x.item_id||x.id,__source:'ebay_listings',title:x.title||x.item_title,canonical_title:x.title||x.item_title,ebay_item_id:x.ebay_item_id||x.external_listing_id,external_listing_id:x.external_listing_id||x.ebay_item_id,status:x.status||'listed'}));
-    }
-    if(q)rows=rows.filter(x=>[x.title,x.canonical_title,x.sku,x.ebay_item_id,x.external_listing_id].some(v=>String(v||'').toLowerCase().includes(q.toLowerCase())));
-    if(S.sub==='review')rows=rows.filter(x=>x.status==='review'||Number(x.confidence??x.identification_confidence??0)<.65);
-    if(S.sub==='listed')rows=rows.filter(x=>x.ebay_item_id||x.external_listing_id||x.listing_id||x.status==='listed'||x.status==='active');
+    let rows=await safeTable('items',{limit:1000,order:{column:'updated_at',ascending:false}});
+    const listings=await safeTable('listings',{limit:2000,order:{column:'updated_at',ascending:false}});
+    const byItem=new Map();
+    listings.forEach(l=>{if(l.item_id)byItem.set(String(l.item_id),l);});
+    rows=rows.map(x=>{
+      const l=byItem.get(String(x.id));
+      return {
+        ...x,
+        __listing:l||null,
+        ebay_item_id:l?.external_listing_id||x.ebay_item_id||obj(x.attributes).ebay_item_id||'',
+        external_listing_id:l?.external_listing_id||x.external_listing_id||'',
+        status:x.status||l?.status||'active'
+      };
+    });
+    if(q)rows=rows.filter(x=>[x.canonical_title,x.title,x.sku,x.ebay_item_id,x.external_listing_id].some(v=>String(v||'').toLowerCase().includes(q.toLowerCase())));
+    if(S.sub==='review')rows=rows.filter(x=>x.status==='review'||Number(x.identification_confidence||0)<.65);
+    if(S.sub==='listed')rows=rows.filter(x=>x.ebay_item_id||x.external_listing_id||x.__listing?.status==='active');
     box.innerHTML=rows.length?rows.map(inventoryRow).join(''):'<div class="empty">No inventory found.</div>';
     box.querySelectorAll('[data-inv]').forEach(b=>b.onclick=()=>openInventory(b.dataset.inv));
   }catch(e){box.innerHTML=`<div class="error">${esc(e.message)}</div>`}
@@ -304,12 +311,12 @@ async function openInventory(id){
 }
 function pageInventoryItem(x){
   const a=obj(x.attributes||x.identification_data);const media=arr(x.media);const imgs=media.length?media:(x.image_url?[x.image_url]:[]);
-  replaceView(`<div class="card"><div class="toolbar"><button class="btn" id="backInv">â Inventory</button><button class="btn primary" id="reid">Re-identify</button><button class="btn" id="revalue">Re-value</button><button class="btn" id="islamic">Islamic / Countermark</button></div>
+  replaceView(`<div class="card"><div class="toolbar"><button class="btn" id="backInv">← Inventory</button><button class="btn primary" id="reid">Re-identify</button><button class="btn" id="revalue">Re-value</button><button class="btn" id="islamic">Islamic / Countermark</button></div>
     <h2>${esc(x.title||x.canonical_title||'Untitled item')}</h2><p class="muted">${esc(x.sku||x.id)}</p>
     <div class="two"><div><h3>Images</h3><div class="thumbgrid">${imgs.map(u=>`<img src="${esc(u)}">`).join('')||'<div class="empty">No images stored</div>'}</div></div>
-    <div><h3>Identification</h3><p>Confidence: <b>${x.confidence==null&&x.identification_confidence==null?'â':Math.round(Number(x.identification_confidence??x.confidence)*100)+'%'}</b></p>
+    <div><h3>Identification</h3><p>Confidence: <b>${x.confidence==null&&x.identification_confidence==null?'—':Math.round(Number(x.identification_confidence??x.confidence)*100)+'%'}</b></p>
     <p class="muted">${esc(a.numista_status||'Numista status not recorded')}</p><pre class="pre">${esc(JSON.stringify(a,null,2))}</pre></div></div>
-    <div class="two"><div class="card"><b>Valuation</b><p>${money(x.valuation_low)} â ${money(x.valuation_mid??x.valuation)} â ${money(x.valuation_high)}</p><span class="muted">${esc(x.valuation_confidence||'not valued')}</span></div>
+    <div class="two"><div class="card"><b>Valuation</b><p>${money(x.valuation_low)} – ${money(x.valuation_mid??x.valuation)} – ${money(x.valuation_high)}</p><span class="muted">${esc(x.valuation_confidence||'not valued')}</span></div>
     <div class="card"><b>eBay</b><p>${esc(x.ebay_item_id||x.external_listing_id||'Not linked')}</p><button class="btn primary" id="prepareListing">Prepare eBay listing</button></div></div>
     <div id="itemMsg"></div></div>`);
   document.querySelector('#backInv').onclick=()=>go('inventory');
@@ -319,7 +326,7 @@ function pageInventoryItem(x){
   document.querySelector('#prepareListing').onclick=()=>createListingFromItem(x);
 }
 async function engineOnItem(kind,item){
-  const out=document.querySelector('#itemMsg');out.innerHTML='<div class="empty"><div class="spinner"></div><p>Running SWISH engineâ¦</p></div>';
+  const out=document.querySelector('#itemMsg');out.innerHTML='<div class="empty"><div class="spinner"></div><p>Running SWISH engine…</p></div>';
   try{
     const urls=arr(item.media).filter(u=>/^https?:/i.test(u));
     let d;
@@ -356,7 +363,7 @@ async function pageIdentify(){
   document.querySelector('#identifyBtn').onclick=runNewIdentification;
 }
 function addIdentifyFiles(files){for(const f of Array.from(files||[])){S.identifyFiles.push(f);S.identifyPreviews.push(URL.createObjectURL(f));}drawPreviews();}
-function drawPreviews(){const b=document.querySelector('#previews');if(!b)return;b.innerHTML=S.identifyPreviews.map((u,i)=>`<div style="position:relative"><img src="${esc(u)}"><button class="btn bad" style="position:absolute;right:2px;top:2px;padding:2px 6px" data-rm="${i}">Ã</button></div>`).join('');b.querySelectorAll('[data-rm]').forEach(x=>x.onclick=()=>{const i=Number(x.dataset.rm);S.identifyFiles.splice(i,1);S.identifyPreviews.splice(i,1);drawPreviews();});}
+function drawPreviews(){const b=document.querySelector('#previews');if(!b)return;b.innerHTML=S.identifyPreviews.map((u,i)=>`<div style="position:relative"><img src="${esc(u)}"><button class="btn bad" style="position:absolute;right:2px;top:2px;padding:2px 6px" data-rm="${i}">×</button></div>`).join('');b.querySelectorAll('[data-rm]').forEach(x=>x.onclick=()=>{const i=Number(x.dataset.rm);S.identifyFiles.splice(i,1);S.identifyPreviews.splice(i,1);drawPreviews();});}
 async function uploadImage(file,bucket='images',folder='identify'){
   const path=`${folder}/${Date.now()}_${Math.random().toString(36).slice(2)}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
   const {data,error}=await sb.storage.from(bucket).upload(path,file,{upsert:true});
@@ -365,12 +372,12 @@ async function uploadImage(file,bucket='images',folder='identify'){
 }
 async function runNewIdentification(){
   const out=document.querySelector('#identifyOut');if(!S.identifyFiles.length){out.innerHTML='<div class="error">Add at least one image.</div>';return}
-  out.innerHTML='<div class="empty"><div class="spinner"></div><p>Running SWISH identification engineâ¦</p></div>';
+  out.innerHTML='<div class="empty"><div class="spinner"></div><p>Running SWISH identification engine…</p></div>';
   try{
     const urls=[];for(const f of S.identifyFiles){try{urls.push(await uploadImage(f))}catch(e){}}
     const d=await edgeAny([SWISH.functions.identify,'swish-identify'],{images:urls.length?urls:S.identifyPreviews,image_data:urls.length?undefined:'local'});
     const candidates=d?.candidates||((d?.identification)?[d.identification]:[]);
-    out.innerHTML=`<div class="card"><h3>Identification results</h3>${candidates.length?candidates.map((c,i)=>`<div class="row"><div class="grow"><div class="title">${esc(c.title||`Candidate ${i+1}`)}</div><div class="muted">${esc(c.category||'')} ${c.model?'Â· '+esc(c.model):''} Â· ${c.confidence==null?'':Math.round(Number(c.confidence)*100)+'% confidence'}</div><p class="small">${esc(c.description||'')}</p></div><div class="price">${money(c.estimated_value??c.valuation)}</div></div>`).join(''):'<div class="empty">No candidate returned.</div>'}
+    out.innerHTML=`<div class="card"><h3>Identification results</h3>${candidates.length?candidates.map((c,i)=>`<div class="row"><div class="grow"><div class="title">${esc(c.title||`Candidate ${i+1}`)}</div><div class="muted">${esc(c.category||'')} ${c.model?'· '+esc(c.model):''} · ${c.confidence==null?'':Math.round(Number(c.confidence)*100)+'% confidence'}</div><p class="small">${esc(c.description||'')}</p></div><div class="price">${money(c.estimated_value??c.valuation)}</div></div>`).join(''):'<div class="empty">No candidate returned.</div>'}
       <pre class="pre">${esc(JSON.stringify(d,null,2))}</pre>
       ${candidates.length?`<button class="btn primary" id="saveIdent">Save selected result to inventory</button>`:''}</div>`;
     if(candidates.length)document.querySelector('#saveIdent').onclick=()=>saveIdentified(candidates[0],d,urls);
@@ -387,7 +394,7 @@ async function saveIdentified(c,d,urls){
 
 async function pageListings(){
   replaceView(`<div class="card"><h2>Listings</h2>${tabs([['all','All'],['active','Active'],['draft','Draft'],['scheduled','Scheduled'],['ended','Ended']],S.sub)}
-    <div class="toolbar"><button class="btn primary" id="refreshListings">Refresh</button><button class="btn" id="newListing">New listing</button><button class="btn" id="reprAll">Reprice all</button></div><div id="listBox"><div class="empty">Loadingâ¦</div></div></div>`);
+    <div class="toolbar"><button class="btn primary" id="refreshListings">Refresh</button><button class="btn" id="newListing">New listing</button><button class="btn" id="reprAll">Reprice all</button></div><div id="listBox"><div class="empty">Loading…</div></div></div>`);
   bindSubs();document.querySelector('#refreshListings').onclick=loadListingsPage;document.querySelector('#reprAll').onclick=()=>runEdgeToast(SWISH.functions.repriceAll,{},'Bulk repricing triggered');document.querySelector('#newListing').onclick=()=>listingEditor();
   await loadListingsPage();
 }
@@ -405,8 +412,8 @@ async function loadListingsPage(){
 }
 async function listingEditor(id){
   let x=id?await table('listings',{eq:{id},single:true}):{platform:'ebay',status:'draft'};
-  replaceView(`<div class="card"><div class="toolbar"><button class="btn" id="backListings">â Listings</button><button class="btn primary" id="saveListing">Save</button>${id?'<button class="btn" id="preflight">Preflight</button><button class="btn good" id="publish">Publish</button>':''}</div><h2>${id?'Edit':'New'} Listing</h2>
-    <div class="two"><div><label class="muted">Title *</label><input id="lfTitle" value="${esc(x.title)}"></div><div><label class="muted">Price (Â£)</label><input id="lfPrice" type="number" step="0.01" value="${esc(x.price??'')}"></div>
+  replaceView(`<div class="card"><div class="toolbar"><button class="btn" id="backListings">← Listings</button><button class="btn primary" id="saveListing">Save</button>${id?'<button class="btn" id="preflight">Preflight</button><button class="btn good" id="publish">Publish</button>':''}</div><h2>${id?'Edit':'New'} Listing</h2>
+    <div class="two"><div><label class="muted">Title *</label><input id="lfTitle" value="${esc(x.title)}"></div><div><label class="muted">Price (£)</label><input id="lfPrice" type="number" step="0.01" value="${esc(x.price??'')}"></div>
     <div><label class="muted">Platform</label><select id="lfPlatform"><option value="ebay">eBay</option><option value="amazon">Amazon</option><option value="depop">Depop</option><option value="vinted">Vinted</option></select></div>
     <div><label class="muted">Status</label><select id="lfStatus"><option>draft</option><option>active</option><option>ended</option><option>scheduled</option></select></div>
     <div><label class="muted">Condition</label><input id="lfCondition" value="${esc(x.condition)}"></div><div><label class="muted">Category</label><input id="lfCategory" value="${esc(x.category)}"></div>
@@ -443,19 +450,25 @@ async function dispatchOne(id){const n=prompt('Tracking number (optional)')||'';
 
 async function pageEbay(){
   replaceView(`<div class="card"><h2>eBay Hub</h2><p class="muted">All eBay credentials remain in the existing backend. This frontend only invokes the existing Edge Functions.</p>
-    <div class="grid"><div class="card metric"><span class="muted">Account</span><b>${esc(S.connector?.status||'Unknown')}</b></div><div class="card metric"><span class="muted">Seller</span><b style="font-size:14px">${esc(S.connector?.seller_account_id||'â')}</b></div><div class="card metric"><span class="muted">Last sync</span><b style="font-size:14px">${datetime(S.connector?.last_sync_at)}</b></div><div class="card metric"><span class="muted">Publishing</span><b>${S.connector?.can_publish?'READY':'CHECK'}</b></div></div>
+    <div class="grid"><div class="card metric"><span class="muted">Account</span><b>${esc(S.connector?.status||'Unknown')}</b></div><div class="card metric"><span class="muted">Seller</span><b style="font-size:14px">${esc(S.connector?.seller_account_id||'—')}</b></div><div class="card metric"><span class="muted">Last sync</span><b style="font-size:14px">${datetime(S.connector?.last_sync_at)}</b></div><div class="card metric"><span class="muted">Publishing</span><b>${S.connector?.can_publish?'READY':'CHECK'}</b></div></div>
     <div class="toolbar"><button class="btn primary" id="ebayConnect">Connect eBay</button><button class="btn" id="ebaySync">Full sync</button><button class="btn" id="ebayListSync">Sync listings</button></div>
     <div class="four">
       ${[['ebayListings','Listings'],['categories','Category Manager'],['ebayOrders','Orders'],['messages','Messages'],['offers','Offers'],['returns','Returns'],['cases','Cases'],['finance','Finances'],['analytics','Analytics'],['import','Import / Export'],['logs','Logs']].map(x=>`<button class="btn" data-ebay="${x[0]}">${x[1]}</button>`).join('')}
     </div><div id="ebayMsg"></div></div>`);
-  document.querySelector('#ebayConnect').onclick=async()=>{try{const d=await edge(SWISH.functions.ebayAuth,{});if(d?.url)window.open(d.url,'_blank');else toast('No OAuth URL returned',true)}catch(e){toast(e.message,true)}};
+  document.querySelector('#ebayConnect').onclick=()=>{
+  if(S.connector?.status){
+    toast('eBay is already connected in the existing SWISH backend.');
+  }else{
+    toast('eBay connection is managed by the existing SWISH backend. No frontend OAuth route is available.',true);
+  }
+};
   document.querySelector('#ebaySync').onclick=()=>runAction('ebaySync',{tenantId:S.tenant?.id,tenant_id:S.tenant?.id,mode:'full'},'Full eBay sync complete.','ebayMsg');
   document.querySelector('#ebayListSync').onclick=()=>runAction('ebayListingsSync',{tenantId:S.tenant?.id,tenant_id:S.tenant?.id,mode:'listings'},'eBay listings sync complete.','ebayMsg');
   document.querySelectorAll('[data-ebay]').forEach(b=>b.onclick=()=>ebaySub(b.dataset.ebay));
 }
 function ebaySub(p){S.page='ebay';S.sub=p;renderEbaySub();}
 async function renderEbaySub(){
-  const base=`<div class="card"><div class="toolbar"><button class="btn" id="backEbay">â eBay Hub</button></div>`;
+  const base=`<div class="card"><div class="toolbar"><button class="btn" id="backEbay">← eBay Hub</button></div>`;
   if(S.sub==='categories'){replaceView(base+'<h2>eBay Category Manager</h2><div id="ebaySubBox"></div></div>');return loadCategoryManager();}
   if(S.sub==='ebayListings'){replaceView(base+'<h2>eBay Listings</h2><div id="ebaySubBox"></div></div>');return loadEbayListings();}
   if(S.sub==='ebayOrders'){replaceView(base+'<h2>eBay Orders</h2><div id="ebaySubBox"></div></div>');return loadTableInto('ebay_orders','ebaySubBox');}
@@ -483,34 +496,34 @@ async function loadCategoryManager(){
   const b=document.querySelector('#ebaySubBox');if(!b)return;
   b.innerHTML=`<div class="toolbar"><input id="catSearch" placeholder="Search inventory title / SKU / category" style="min-width:240px"><button class="btn primary" id="catRefresh">Refresh inventory</button></div>
   <div class="card" style="margin:12px 0"><b>Category Manager</b><p class="muted">This uses the existing SWISH database. Search your inventory, choose an eBay category, then save it. SWISH will store the eBay category ID and name. The browser never receives eBay credentials.</p></div>
-  <div id="catBox"><div class="empty">Loading inventoryâ¦</div></div>`;
+  <div id="catBox"><div class="empty">Loading inventory…</div></div>`;
   document.querySelector('#catRefresh').onclick=loadCategoryManager;
   document.querySelector('#catSearch').oninput=()=>renderCategoryRows(S.cache.categoryInventory||[],document.querySelector('#catSearch').value);
   await loadCategoryChoices();
 }
 async function loadCategoryChoices(){
-  const inv=await safeTable('inventory',{limit:1000,order:{column:'created_at',ascending:false}});
-  const listings=await safeTable('ebay_listings',{limit:1000,order:{column:'created_at',ascending:false}});
+  const inv=await safeTable('items',{limit:1000,order:{column:'created_at',ascending:false}});
+  const listings=await safeTable('listings',{limit:1000,order:{column:'created_at',ascending:false}});
   const lm={};listings.forEach(x=>{const key=x.item_id||x.inventory_item_id||x.ebay_item_id||x.external_listing_id;if(key)lm[key]=x;});
-  const rows=inv.length ? inv.map(x=>({...x,__listing:lm[x.id]||lm[x.ebay_item_id]||null,__cat:categoryValue({...x,...(lm[x.id]||{})})})) : listings.map(x=>({...x,id:x.inventory_item_id||x.item_id||x.id,__listing:x,__cat:categoryValue(x),__source:'ebay_listings',title:x.title||x.item_title,canonical_title:x.title||x.item_title,ebay_item_id:x.ebay_item_id||x.external_listing_id,external_listing_id:x.external_listing_id||x.ebay_item_id}));
+  const rows=inv.length ? inv.map(x=>({...x,__listing:lm[x.id]||lm[x.ebay_item_id]||null,__cat:categoryValue({...x,...(lm[x.id]||{})})})) : listings.map(x=>({...x,id:x.inventory_item_id||x.item_id||x.id,__listing:x,__cat:categoryValue(x),__source:'listings',title:x.title||x.item_title,canonical_title:x.title||x.item_title,ebay_item_id:x.ebay_item_id||x.external_listing_id,external_listing_id:x.external_listing_id||x.ebay_item_id}));
   S.cache.categoryInventory=rows;renderCategoryRows(rows,'');
 }
 function renderCategoryRows(rows,term){
   const b=document.querySelector('#catBox');if(!b)return;term=String(term||'').toLowerCase().trim();
   const filtered=rows.filter(x=>!term||[x.title,x.canonical_title,x.sku,x.ebay_item_id,x.external_listing_id,x.__cat?.id,x.__cat?.name].some(v=>String(v||'').toLowerCase().includes(term)));
   if(!filtered.length){b.innerHTML='<div class="empty">No matching inventory items.</div>';return;}
-  b.innerHTML=`<div class="table-wrap"><table class="tbl"><thead><tr><th>Item</th><th>eBay listing</th><th>Current category</th><th>Change</th></tr></thead><tbody>${filtered.map(x=>{const c=x.__cat||{};return `<tr><td><div class="title">${esc(x.title||x.canonical_title||x.sku||x.id)}</div><div class="muted">${esc(x.sku||x.id)}</div></td><td>${esc(x.ebay_item_id||x.external_listing_id||x.__listing?.external_listing_id||'Not linked')}</td><td>${c.id?`<b>${esc(c.id)}</b> Â· ${esc(c.name||'')}`:'<span class="muted">Not set</span>'}</td><td><button class="btn primary" data-cat-item="${esc(x.id)}">Select category</button></td></tr>`}).join('')}</tbody></table></div>`;
+  b.innerHTML=`<div class="table-wrap"><table class="tbl"><thead><tr><th>Item</th><th>eBay listing</th><th>Current category</th><th>Change</th></tr></thead><tbody>${filtered.map(x=>{const c=x.__cat||{};return `<tr><td><div class="title">${esc(x.title||x.canonical_title||x.sku||x.id)}</div><div class="muted">${esc(x.sku||x.id)}</div></td><td>${esc(x.ebay_item_id||x.external_listing_id||x.__listing?.external_listing_id||'Not linked')}</td><td>${c.id?`<b>${esc(c.id)}</b> · ${esc(c.name||'')}`:'<span class="muted">Not set</span>'}</td><td><button class="btn primary" data-cat-item="${esc(x.id)}">Select category</button></td></tr>`}).join('')}</tbody></table></div>`;
   b.querySelectorAll('[data-cat-item]').forEach(btn=>btn.onclick=()=>openCategoryEditor(btn.dataset.catItem));
 }
 async function openCategoryEditor(itemId){
   let item=null;
   try{item=await table('inventory',{eq:{id:itemId},single:true})}catch(_){}
-  const listings=await safeTable('ebay_listings',{limit:1000});
+  const listings=await safeTable('listings',{limit:1000});
   if(!item) item=listings.find(x=>(x.inventory_item_id||x.item_id||x.id)===itemId)||listings.find(x=>x.id===itemId);
   if(!item) throw new Error('Inventory/listing record not found');
   const listing=listings.find(x=>x.item_id===itemId||x.inventory_item_id===itemId||x.ebay_item_id===item.ebay_item_id||x.external_listing_id===item.external_listing_id)||null;
   const current=categoryValue({...item,...(listing||{})});
-  replaceView(`<div class="card"><div class="toolbar"><button class="btn" id="catBack">â Category Manager</button></div><h2>Change eBay category</h2><p><b>${esc(item.title||item.canonical_title||item.id)}</b></p>
+  replaceView(`<div class="card"><div class="toolbar"><button class="btn" id="catBack">← Category Manager</button></div><h2>Change eBay category</h2><p><b>${esc(item.title||item.canonical_title||item.id)}</b></p>
   <div class="two"><div><label class="muted">eBay Category ID</label><input id="catId" value="${esc(current.id)}" placeholder="e.g. 179731"></div><div><label class="muted">Category name</label><input id="catName" value="${esc(current.name)}" placeholder="e.g. Other Collectables"></div></div>
   <div class="toolbar" style="margin-top:12px"><input id="catChoiceSearch" placeholder="Type category name to search eBay"><button class="btn" id="catAI">AI suggest</button><button class="btn primary" id="catSave">Save category</button></div>
   <div id="catChoices"><div class="muted">Type at least 2 characters to search. If the existing backend exposes an eBay taxonomy search it will be used; otherwise enter the exact eBay category ID/name.</div></div><div id="catMsg"></div></div>`);
@@ -518,28 +531,28 @@ async function openCategoryEditor(itemId){
   document.querySelector('#catChoiceSearch').oninput=async()=>{
     const q=document.querySelector('#catChoiceSearch').value.trim();if(q.length<2)return;
     const live=await ebayCategorySearch(q);const list=live.map(c=>({id:c.ebay_category_id||c.category_id||c.id||c.categoryId,name:c.ebay_category_name||c.category_name||c.name||c.category||''})).filter(c=>c.id&&c.name).slice(0,100);
-    document.querySelector('#catChoices').innerHTML=list.length?list.map(c=>`<button class="btn" style="margin:4px" data-cat-choice="${esc(c.id)}" data-cat-name="${esc(c.name)}">${esc(c.name)} Â· ${esc(c.id)}</button>`).join(''):'<div class="muted">No live eBay category search is available through the existing backend. You can still enter the exact eBay category ID and name.</div>';
+    document.querySelector('#catChoices').innerHTML=list.length?list.map(c=>`<button class="btn" style="margin:4px" data-cat-choice="${esc(c.id)}" data-cat-name="${esc(c.name)}">${esc(c.name)} · ${esc(c.id)}</button>`).join(''):'<div class="muted">No live eBay category search is available through the existing backend. You can still enter the exact eBay category ID and name.</div>';
     document.querySelectorAll('[data-cat-choice]').forEach(x=>x.onclick=()=>{document.querySelector('#catId').value=x.dataset.catChoice;document.querySelector('#catName').value=x.dataset.catName});
   };
-  document.querySelector('#catAI').onclick=async()=>{try{const urls=arr(item.media).filter(u=>/^https?:/i.test(u));const d=await edgeAny([SWISH.functions.identify,'swish-identify'],{tenant_id:S.tenant?.id,item_id:item.id,tenantId:S.tenant?.id,itemId:item.id,existingImageUrls:urls,specialistId:item.specialist_id||'curiosities_collectibles',knownAttributes:item.attributes||{},categorySuggestionOnly:true});const suggested=d?.category||d?.suggested_category||d?.result?.category||d?.candidates?.[0]?.category||'';if(suggested){document.querySelector('#catName').value=suggested;toast('AI suggestion added â select/enter the matching eBay category ID before saving')}else toast('AI did not return a category suggestion',true)}catch(e){toast(e.message,true)}};
-  document.querySelector('#catSave').onclick=async()=>{const id=document.querySelector('#catId').value.trim(),name=document.querySelector('#catName').value.trim();if(!id||!name){toast('Enter both the eBay category ID and name',true);return}const msg=document.querySelector('#catMsg');msg.innerHTML='<div class="empty">Saving category to SWISHâ¦</div>';try{
+  document.querySelector('#catAI').onclick=async()=>{try{const urls=arr(item.media).filter(u=>/^https?:/i.test(u));const d=await edgeAny([SWISH.functions.identify,'swish-identify'],{tenant_id:S.tenant?.id,item_id:item.id,tenantId:S.tenant?.id,itemId:item.id,existingImageUrls:urls,specialistId:item.specialist_id||'curiosities_collectibles',knownAttributes:item.attributes||{},categorySuggestionOnly:true});const suggested=d?.category||d?.suggested_category||d?.result?.category||d?.candidates?.[0]?.category||'';if(suggested){document.querySelector('#catName').value=suggested;toast('AI suggestion added — select/enter the matching eBay category ID before saving')}else toast('AI did not return a category suggestion',true)}catch(e){toast(e.message,true)}};
+  document.querySelector('#catSave').onclick=async()=>{const id=document.querySelector('#catId').value.trim(),name=document.querySelector('#catName').value.trim();if(!id||!name){toast('Enter both the eBay category ID and name',true);return}const msg=document.querySelector('#catMsg');msg.innerHTML='<div class="empty">Saving category to SWISH…</div>';try{
     const patch={ebay_category_id:id,ebay_category_name:name,category:name,category_id:id,updated_at:new Date().toISOString()};
-    if(item.__source!=='ebay_listings' && item.id) await update('inventory',item.id,patch).catch(()=>{});
-    if(listing?.id) await update('ebay_listings',listing.id,patch).catch(()=>{});
-    else if(item.__source==='ebay_listings' && item.id) await update('ebay_listings',item.id,patch).catch(()=>{});
+    if(item.__source!=='listings' && item.id) await update('inventory',item.id,patch).catch(()=>{});
+    if(listing?.id) await update('listings',listing.id,patch).catch(()=>{});
+    else if(item.__source==='listings' && item.id) await update('listings',item.id,patch).catch(()=>{});
     let ebayChanged=false;
     for(const fn of ['ebay-revise-listing','ebay-revise-item','ebay-category-update']){try{await edge(fn,{tenant_id:S.tenant?.id,tenantId:S.tenant?.id,item_id:item.id,itemId:item.id,listing_id:listing?.id,listingId:listing?.external_listing_id||listing?.ebay_item_id||item.ebay_item_id||item.external_listing_id,categoryId:id,category_id:id,categoryName:name,category_name:name});ebayChanged=true;break}catch(e){}}
     msg.innerHTML=ebayChanged?'<div class="success">Category saved to SWISH and the existing eBay revision action accepted the update.</div>':'<div class="success">Category saved to SWISH. The current backend did not expose an eBay category-revision action, so the live eBay listing was not falsely reported as changed.</div>';
   }catch(e){msg.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
 }
 
-async function loadEbayListings(){const box=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_listings',{limit:500,order:{column:'created_at',ascending:false}});box.innerHTML=tableHTML(rows,['title','status','price','external_listing_id'],true)}catch(e){box.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function loadEbayListings(){const box=document.querySelector('#ebaySubBox');try{const rows=await table('listings',{limit:500,order:{column:'updated_at',ascending:false},eq:{tenant_id:S.tenant?.id,marketplace_id:'ebay'}});box.innerHTML=tableHTML(rows,['title','status','price','external_listing_id'],true)}catch(e){box.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
 function tableHTML(rows,fields,actions=false){if(!rows.length)return'<div class="empty">No records.</div>';return`<div class="table-wrap"><table class="tbl"><thead><tr>${fields.map(f=>`<th>${esc(f.replace(/_/g,' '))}</th>`).join('')}${actions?'<th>Actions</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr>${fields.map(f=>`<td>${esc(typeof r[f]==='number'&&/price|amount|total/.test(f)?money(r[f]):r[f]??'')}</td>`).join('')}${actions?`<td><button class="btn" data-reprice="${esc(r.id||'')}">Reprice</button></td>`:''}</tr>`).join('')}</tbody></table></div>`}
 async function loadTableInto(name,id){const b=document.querySelector('#'+id);try{const rows=await table(name,{limit:500,order:{column:'created_at',ascending:false}});b.innerHTML=tableHTML(rows,Object.keys(rows[0]||{}).filter(k=>['id','tenant_id'].indexOf(k)<0).slice(0,7));}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
-async function loadMessages(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_messages',{limit:200,order:{column:'created_at',ascending:false}});b.innerHTML=rows.length?rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.subject||'eBay message')}</div><div class="muted">${esc(r.buyer_username||'')} Â· ${esc(r.body||r.message||'')}</div></div><button class="btn" data-msg="${esc(r.message_id||r.id)}">Reply</button></div>`).join(''):'<div class="empty">No messages.</div>';b.querySelectorAll('[data-msg]').forEach(x=>x.onclick=async()=>{const text=prompt('Reply');if(!text)return;try{await edge(SWISH.functions.ebayReply,{message_id:x.dataset.msg,body:text});toast('Reply sent')}catch(e){toast(e.message,true)}})}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
-async function loadOffers(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_offers',{limit:200,order:{column:'created_at',ascending:false}});b.innerHTML=rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.title||r.item_title||r.offer_id)}</div><div class="muted">${money(r.offer_price)} Â· ${esc(r.status||'')}</div></div><button class="btn good" data-offer="${esc(r.id)}" data-action="accept">Accept</button><button class="btn bad" data-offer="${esc(r.id)}" data-action="decline">Decline</button></div>`).join('')||'<div class="empty">No offers.</div>';b.querySelectorAll('[data-offer]').forEach(x=>x.onclick=async()=>{try{await edge(SWISH.functions.ebayOffer,{offer_id:x.dataset.offer,action:x.dataset.action});toast('Offer updated');loadOffers()}catch(e){toast(e.message,true)}})}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
-async function loadReturns(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_returns',{limit:200,order:{column:'created_at',ascending:false}});b.innerHTML=rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.return_id||r.external_return_id)}</div><div class="muted">${esc(r.status||'')} Â· ${esc(r.reason||'')}</div></div><button class="btn" data-ret="${esc(r.id)}">Action</button></div>`).join('')||'<div class="empty">No returns.</div>';b.querySelectorAll('[data-ret]').forEach(x=>x.onclick=async()=>{const a=prompt('Return action','accept');if(!a)return;try{await edge(SWISH.functions.ebayReturn,{return_id:x.dataset.ret,action:a});toast('Return action submitted')}catch(e){toast(e.message,true)}})}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
-async function loadCases(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_cases',{limit:200,order:{column:'created_at',ascending:false}});b.innerHTML=rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.case_id||r.external_case_id)}</div><div class="muted">${esc(r.status||'')} Â· ${esc(r.reason||'')}</div></div><button class="btn" data-case="${esc(r.id)}">Respond</button></div>`).join('')||'<div class="empty">No cases.</div>';b.querySelectorAll('[data-case]').forEach(x=>x.onclick=async()=>{try{await edge(SWISH.functions.ebayCase,{case_id:x.dataset.case});toast('Case response submitted')}catch(e){toast(e.message,true)}})}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function loadMessages(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_messages',{limit:200,order:{column:'created_at',ascending:false}});b.innerHTML=rows.length?rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.subject||'eBay message')}</div><div class="muted">${esc(r.buyer_username||'')} · ${esc(r.body||r.message||'')}</div></div><button class="btn" data-msg="${esc(r.message_id||r.id)}">Reply</button></div>`).join(''):'<div class="empty">No messages.</div>';b.querySelectorAll('[data-msg]').forEach(x=>x.onclick=async()=>{const text=prompt('Reply');if(!text)return;try{await edge(SWISH.functions.ebayReply,{message_id:x.dataset.msg,body:text});toast('Reply sent')}catch(e){toast(e.message,true)}})}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function loadOffers(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_offers',{limit:200,order:{column:'created_at',ascending:false}});b.innerHTML=rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.title||r.item_title||r.offer_id)}</div><div class="muted">${money(r.offer_price)} · ${esc(r.status||'')}</div></div><button class="btn good" data-offer="${esc(r.id)}" data-action="accept">Accept</button><button class="btn bad" data-offer="${esc(r.id)}" data-action="decline">Decline</button></div>`).join('')||'<div class="empty">No offers.</div>';b.querySelectorAll('[data-offer]').forEach(x=>x.onclick=async()=>{try{await edge(SWISH.functions.ebayOffer,{offer_id:x.dataset.offer,action:x.dataset.action});toast('Offer updated');loadOffers()}catch(e){toast(e.message,true)}})}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function loadReturns(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_returns',{limit:200,order:{column:'created_at',ascending:false}});b.innerHTML=rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.return_id||r.external_return_id)}</div><div class="muted">${esc(r.status||'')} · ${esc(r.reason||'')}</div></div><button class="btn" data-ret="${esc(r.id)}">Action</button></div>`).join('')||'<div class="empty">No returns.</div>';b.querySelectorAll('[data-ret]').forEach(x=>x.onclick=async()=>{const a=prompt('Return action','accept');if(!a)return;try{await edge(SWISH.functions.ebayReturn,{return_id:x.dataset.ret,action:a});toast('Return action submitted')}catch(e){toast(e.message,true)}})}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function loadCases(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_cases',{limit:200,order:{column:'created_at',ascending:false}});b.innerHTML=rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.case_id||r.external_case_id)}</div><div class="muted">${esc(r.status||'')} · ${esc(r.reason||'')}</div></div><button class="btn" data-case="${esc(r.id)}">Respond</button></div>`).join('')||'<div class="empty">No cases.</div>';b.querySelectorAll('[data-case]').forEach(x=>x.onclick=async()=>{try{await edge(SWISH.functions.ebayCase,{case_id:x.dataset.case});toast('Case response submitted')}catch(e){toast(e.message,true)}})}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
 async function loadFinance(){const b=document.querySelector('#ebaySubBox');try{const summary=await edge(SWISH.functions.ebayFinance,{});const payouts=await table('ebay_payouts',{limit:50,order:{column:'created_at',ascending:false}});const tx=await table('ebay_transactions',{limit:50,order:{column:'created_at',ascending:false}});b.innerHTML=`<pre class="pre">${esc(JSON.stringify(summary,null,2))}</pre><h3>Payouts</h3>${tableHTML(payouts,['payout_id','amount','status','created_at'])}<h3>Transactions</h3>${tableHTML(tx,['transaction_id','amount','type','created_at'])}`}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
 async function loadAnalytics(){const b=document.querySelector('#ebaySubBox');try{const a=await edge(SWISH.functions.ebayAnalytics,{});const orders=await table('orders',{limit:500});const by={};orders.forEach(o=>{const d=new Date(o.created_at||Date.now());const k=`${d.getMonth()+1}/${d.getFullYear()}`;by[k]??={orders:0,revenue:0};by[k].orders++;by[k].revenue+=Number(o.total_amount||o.sale_price||0)});b.innerHTML=`<pre class="pre">${esc(JSON.stringify(a,null,2))}</pre><div class="table-wrap"><table class="tbl"><thead><tr><th>Month</th><th>Orders</th><th>Revenue</th></tr></thead><tbody>${Object.entries(by).slice(-12).map(([k,v])=>`<tr><td>${k}</td><td>${v.orders}</td><td>${money(v.revenue)}</td></tr>`).join('')}</tbody></table></div>`}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
 
@@ -561,7 +574,7 @@ function pick(row,keys){
 }
 function num(v){
   if(v===null||v===undefined||v==='')return null;
-  const n=Number(String(v).replace(/[Â£$,]/g,'').trim());
+  const n=Number(String(v).replace(/[£$,]/g,'').trim());
   return Number.isFinite(n)?n:null;
 }
 function splitUrls(v){
@@ -590,68 +603,143 @@ function ebayCsvItem(row){
 async function importEbayRowsDirect(rows,type){
   const parsed=rows.map(ebayCsvItem).filter(x=>x.itemId||x.title!=='Untitled eBay item');
   if(!parsed.length)throw new Error('No usable eBay listing rows were found in the file.');
-  const existing=await safeTable('inventory',{limit:5000});
-  const byEbay=new Map(),bySku=new Map();
-  existing.forEach(x=>{
-    [x.ebay_item_id,x.external_listing_id,x.ebay_item_number,x.item_number].forEach(k=>{if(k)byEbay.set(String(k),x)});
+  if(!S.tenant?.id)throw new Error('No SWISH tenant is available.');
+
+  /*
+   * The canonical SWISH schema already used by the original app is:
+   *   items    = canonical inventory
+   *   listings = marketplace/listing records
+   *
+   * Do NOT use the nonexistent inventory or ebay_listings relations and
+   * do NOT call the missing ebay-import-csv Edge Function.
+   */
+  const [existingItems,existingListings]=await Promise.all([
+    safeTable('items',{limit:5000,order:{column:'updated_at',ascending:false}}),
+    safeTable('listings',{limit:5000,order:{column:'updated_at',ascending:false}})
+  ]);
+
+  const byEbay=new Map(),bySku=new Map(),listingByEbay=new Map();
+  existingItems.forEach(x=>{
+    const a=obj(x.attributes);
+    [x.ebay_item_id,x.external_listing_id,x.ebay_item_number,x.item_number,a.ebay_item_id].forEach(k=>{
+      if(k)byEbay.set(String(k),x);
+    });
     if(x.sku)bySku.set(String(x.sku).toLowerCase(),x);
   });
-  const stats={read:parsed.length,updated:0,created:0,failed:0,failures:[],categories:{}};
+  existingListings.forEach(x=>{
+    [x.external_listing_id,x.ebay_item_id,x.ebay_item_number,x.item_number].forEach(k=>{
+      if(k)listingByEbay.set(String(k),x);
+    });
+  });
+
+  const stats={read:parsed.length,updated:0,created:0,failed:0,duplicates:0,failures:[],categories:{}};
+  const seen=new Set();
+
   for(const p of parsed){
+    if(p.itemId && seen.has(p.itemId)){stats.duplicates++;continue;}
+    if(p.itemId)seen.add(p.itemId);
+
     if(p.categoryId||p.categoryName){
       const key=`${p.categoryId||''}|${p.categoryName||''}`;
       stats.categories[key]=(stats.categories[key]||0)+1;
     }
-    const existingRow=(p.itemId&&byEbay.get(p.itemId))||(p.sku&&bySku.get(p.sku.toLowerCase()));
-    const patch={
-      title:p.title,
-      sku:p.sku||existingRow?.sku||null,
-      description:p.description||existingRow?.description||null,
-      condition:p.condition||existingRow?.condition||null,
-      status:p.status,
-      price:p.price,
-      expected_selling_price:p.price,
-      ebay_item_id:p.itemId||existingRow?.ebay_item_id||null,
-      external_listing_id:p.itemId||existingRow?.external_listing_id||null,
-      ebay_category_id:p.categoryId||existingRow?.ebay_category_id||null,
-      ebay_category_name:p.categoryName||existingRow?.ebay_category_name||null,
-      category:p.categoryName||existingRow?.category||null,
-      category_id:p.categoryId||existingRow?.category_id||null,
-      image_url:p.images[0]||existingRow?.image_url||null,
-      media:p.images.length?p.images:(Array.isArray(existingRow?.media)?existingRow.media:[]),
-      attributes:{
-        ...(obj(existingRow?.attributes)),
+
+    try{
+      let item=(p.itemId&&byEbay.get(p.itemId))||(p.sku&&bySku.get(p.sku.toLowerCase()));
+      let listing=(p.itemId&&listingByEbay.get(p.itemId))||null;
+
+      const oldAttrs=obj(item?.attributes);
+      const media=p.images.length?p.images:(Array.isArray(item?.media)?item.media:[]);
+      const attrs={
+        ...oldAttrs,
         ebay_imported:true,
-        ebay_item_id:p.itemId||existingRow?.ebay_item_id||null,
-        ebay_category_id:p.categoryId||existingRow?.ebay_category_id||null,
-        ebay_category_name:p.categoryName||existingRow?.ebay_category_name||null,
+        ebay_item_id:p.itemId||oldAttrs.ebay_item_id||null,
+        ebay_category_id:p.categoryId||oldAttrs.ebay_category_id||null,
+        ebay_category_name:p.categoryName||oldAttrs.ebay_category_name||null,
         import_type:type,
         imported_at:new Date().toISOString(),
         ebay_raw:p.raw
-      },
-      updated_at:new Date().toISOString()
-    };
-    // Do not send undefined values; null is intentional for known fields.
-    try{
-      if(existingRow?.id){
-        await update('inventory',existingRow.id,patch);
-        stats.updated++;
-      }else{
-        const created=await insert('inventory',patch);
+      };
+
+      if(!item){
+        const sku=p.sku||`EBAY-${p.itemId||Date.now()}`;
+        const created=await insert('items',{
+          tenant_id:S.tenant.id,
+          canonical_title:p.title.slice(0,200),
+          description:p.description||'',
+          specialist_id:'curiosities_collectibles',
+          status:p.status==='ended'?'archived':'active',
+          identification_source:'ebay_import',
+          identification_confidence:0,
+          expected_selling_price:Number(p.price)||0,
+          quantity:Number.isFinite(p.quantity)&&p.quantity>0?p.quantity:1,
+          condition:p.condition||'',
+          condition_notes:'',
+          media,
+          sku,
+          inventory_origin:'ebay_import',
+          attributes:attrs,
+          updated_at:new Date().toISOString()
+        });
+        item=created;
         stats.created++;
-        if(created?.id){
-          const copy={...created};
-          if(p.itemId)byEbay.set(p.itemId,copy);
-          if(p.sku)bySku.set(p.sku.toLowerCase(),copy);
+        if(item?.id){
+          bySku.set(String(sku).toLowerCase(),item);
+          if(p.itemId)byEbay.set(p.itemId,item);
         }
+      }else{
+        await update('items',item.id,{
+          canonical_title:p.title.slice(0,200),
+          description:p.description||item.description||'',
+          status:p.status==='ended'?'archived':'active',
+          expected_selling_price:Number(p.price)||Number(item.expected_selling_price||0),
+          quantity:Number.isFinite(p.quantity)&&p.quantity>0?p.quantity:Number(item.quantity||1),
+          condition:p.condition||item.condition||'',
+          media,
+          sku:p.sku||item.sku,
+          attributes:attrs,
+          updated_at:new Date().toISOString()
+        });
+        stats.updated++;
+      }
+
+      const listingPatch={
+        tenant_id:S.tenant.id,
+        item_id:item.id,
+        marketplace_id:'ebay',
+        title:p.title.slice(0,200),
+        description:p.description||'',
+        price:Number(p.price)||0,
+        floor_price:Number(p.price)||0,
+        ceiling_price:Number(p.price)||0,
+        shipping_cost:0,
+        status:p.status==='ended'?'ended':'active',
+        category_id:p.categoryId||null,
+        external_listing_id:p.itemId||null,
+        import_source:'ebay_csv',
+        updated_at:new Date().toISOString()
+      };
+
+      if(listing?.id){
+        await update('listings',listing.id,listingPatch);
+      }else{
+        listing=await insert('listings',listingPatch);
+        if(p.itemId&&listing)listingByEbay.set(p.itemId,listing);
       }
     }catch(e){
       stats.failed++;
-      if(stats.failures.length<20)stats.failures.push({item:p.itemId||p.title,error:e.message||String(e)});
+      if(stats.failures.length<20){
+        stats.failures.push({
+          item:p.itemId||'',
+          sku:p.sku||'',
+          error:e.message||String(e)
+        });
+      }
     }
   }
   return stats;
 }
+
 function categorySummaryHtml(stats){
   const cats=Object.entries(stats.categories||{}).sort((a,b)=>b[1]-a[1]);
   if(!cats.length)return '';
@@ -779,8 +867,8 @@ async function bindImport(){
 
     const box=document.querySelector('#ebaySubBox');
     importBtn.disabled=true;
-    importBtn.textContent='Readingâ¦';
-    if(box)box.innerHTML='<div class="empty"><div class="spinner"></div><p>Reading the eBay exportâ¦</p></div>';
+    importBtn.textContent='Reading…';
+    if(box)box.innerHTML='<div class="empty"><div class="spinner"></div><p>Reading the eBay export…</p></div>';
 
     try{
       if(typeof XLSX==='undefined')throw new Error('XLSX parser is not loaded. Check index.html.');
@@ -792,49 +880,36 @@ async function bindImport(){
       if(!rows.length)throw new Error('The selected eBay file contains no data rows.');
 
       const type=document.querySelector('#impType')?.value||'listings';
-      if(type==='listings'||type==='inventory'){
-        const parsed=rows.map(ebayCsvItem).filter(x=>x.itemId||x.title!=='Untitled eBay item');
-        if(!parsed.length)throw new Error('No usable eBay listing rows were found.');
-
-        /*
-         * Convert the ORIGINAL eBay worksheet back to CSV. The existing
-         * backend can now fetch this data URL without the missing imports
-         * storage bucket.
-         */
-        const csvText=XLSX.utils.sheet_to_csv(sheet);
-
-        if(box)box.innerHTML=`<div class="empty"><div class="spinner"></div><p>Sending ${parsed.length} eBay listings to the existing SWISH import serviceâ¦</p><p class="muted">No browser-side inventory writes. No storage bucket required.</p></div>`;
-
-        const stats=await importEbayRowsViaBackend(parsed,type,f.name,csvText);
-
-        const failed=Number(stats.failed||0);
-        const created=Number(stats.created||0);
-        const updated=Number(stats.updated||0);
-        const duplicates=Number(stats.duplicates||0);
-
-        if(box){
-          box.innerHTML=`
-            <div class="${failed ? 'error' : 'success'}">
-              <b>eBay import ${failed ? 'returned failures' : 'completed'}.</b>
-              <br>${created} created Â· ${updated} updated Â· ${duplicates} duplicates Â· ${failed} failed Â· ${parsed.length} rows read
-              <p class="muted">Existing SWISH backend: <code>ebay-import-csv</code>. Browser-side database writes were not used.</p>
-            </div>
-            ${stats.failures?.length?`<div class="error" style="margin-top:12px"><b>Backend response</b><pre class="pre">${esc(JSON.stringify(stats.failures.slice(0,20),null,2))}</pre></div>`:''}
-            ${categorySummaryHtmlFromRows(parsed.map(x=>({
-              ebay_category_1_id:x.categoryId,
-              ebay_category_1_name:x.categoryName
-            })))}`;
-        }
-
-        await loadInventory();
-      }else{
-        const csvText=XLSX.utils.sheet_to_csv(sheet);
-        const d=await edge(SWISH.functions.ebayImport,
-          ebayImportPayload(type,f.name,rows,csvDataUrlFromText(csvText)));
-        if(box)box.innerHTML=`<div class="success">Import completed.<pre class="pre">${esc(JSON.stringify(d,null,2))}</pre></div>`;
+      if(type!=='listings' && type!=='inventory'){
+        throw new Error('This GitHub import is currently for eBay Listings/Inventory CSVs. Orders remain on the existing SWISH orders pipeline.');
       }
+
+      const parsed=rows.map(ebayCsvItem).filter(x=>x.itemId||x.title!=='Untitled eBay item');
+      if(!parsed.length)throw new Error('No usable eBay listing rows were found.');
+
+      if(box)box.innerHTML=`<div class="empty"><div class="spinner"></div><p>Importing ${parsed.length} eBay listings into the existing SWISH canonical inventory…</p><p class="muted">Using existing <code>items</code> and <code>listings</code> tables. No new database, table or storage bucket.</p></div>`;
+
+      const stats=await importEbayRowsDirect(rows,type);
+
+      const failed=Number(stats.failed||0);
+      const created=Number(stats.created||0);
+      const updated=Number(stats.updated||0);
+      const duplicates=Number(stats.duplicates||0);
+
+      if(box){
+        box.innerHTML=`
+          <div class="${failed ? 'error' : 'success'}">
+            <b>eBay import ${failed ? 'completed with failures' : 'completed successfully'}.</b>
+            <br>${created} created · ${updated} updated · ${duplicates} duplicates · ${failed} failed · ${parsed.length} rows read
+            <p class="muted">Canonical SWISH tables used: <code>items</code> + <code>listings</code>.</p>
+          </div>
+          ${stats.failures?.length?`<div class="error" style="margin-top:12px"><b>First failures</b><pre class="pre">${esc(JSON.stringify(stats.failures.slice(0,20),null,2))}</pre></div>`:''}
+          ${categorySummaryHtml(stats)}`;
+      }
+
+      await loadInventory();
     }catch(e){
-      if(box)box.innerHTML=`<div class="error"><b>eBay CSV import failed.</b><br>${esc(e.message||String(e))}<p class="muted">The existing <code>ebay-import-csv</code> backend was called using a fetchable data URL. No new database or storage bucket was created.</p></div>`;
+      if(box)box.innerHTML=`<div class="error"><b>eBay CSV import failed.</b><br>${esc(e.message||String(e))}<p class="muted">No replacement database, storage bucket or frontend-only inventory was created.</p></div>`;
     }finally{
       importBtn.disabled=false;
       importBtn.textContent='Import';
@@ -855,7 +930,7 @@ async function bindImport(){
     };
   }
 }
-async function loadLogs(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_logs',{limit:300,order:{column:'created_at',ascending:false}});b.innerHTML=rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.event||r.action||'eBay log')}</div><div class="muted">${datetime(r.created_at)} Â· ${esc(r.level||'info')}</div><pre class="pre">${esc(JSON.stringify(r,null,2))}</pre></div></div>`).join('')||'<div class="empty">No logs.</div>'}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function loadLogs(){const b=document.querySelector('#ebaySubBox');try{const rows=await table('ebay_logs',{limit:300,order:{column:'created_at',ascending:false}});b.innerHTML=rows.map(r=>`<div class="row"><div class="grow"><div class="title">${esc(r.event||r.action||'eBay log')}</div><div class="muted">${datetime(r.created_at)} · ${esc(r.level||'info')}</div><pre class="pre">${esc(JSON.stringify(r,null,2))}</pre></div></div>`).join('')||'<div class="empty">No logs.</div>'}catch(e){b.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
 
 async function pageMore(){
   replaceView(`<div class="card"><h2>SWISH tools</h2><div class="four">
@@ -877,10 +952,10 @@ async function genericReview(title,name){const rows=await safeTable(name,{limit:
 function pageAudit(){return genericCrudPage('Audit','audit_log',['action','entity_type','entity_id','created_at'])}
 function pageDispatch(){return genericCrudPage('Dispatch','orders',['external_order_id','buyer_name','status','dispatch_by','tracking_number','carrier'])}
 function pageRepricing(){return genericCrudPage('Repricing','listings',['title','platform','price','suggested_price','status'])}
-async function pageInsights(){const [inv,orders]=await Promise.all([safeTable('inventory',{limit:1000}),safeTable('orders',{limit:1000})]);replaceView(`<div class="card"><h2>Insights</h2><div class="grid"><div class="card metric"><span class="muted">Inventory</span><b>${inv.length}</b></div><div class="card metric"><span class="muted">Orders</span><b>${orders.length}</b></div><div class="card metric"><span class="muted">Inventory value</span><b>${money(inv.reduce((s,x)=>s+Number(x.expected_selling_price||x.valuation_mid||x.valuation||0),0))}</b></div><div class="card metric"><span class="muted">Sales</span><b>${money(orders.reduce((s,x)=>s+Number(x.total_amount||x.sale_price||0),0))}</b></div></div></div>`)}
+async function pageInsights(){const [inv,orders]=await Promise.all([safeTable('items',{limit:1000}),safeTable('orders',{limit:1000})]);replaceView(`<div class="card"><h2>Insights</h2><div class="grid"><div class="card metric"><span class="muted">Inventory</span><b>${inv.length}</b></div><div class="card metric"><span class="muted">Orders</span><b>${orders.length}</b></div><div class="card metric"><span class="muted">Inventory value</span><b>${money(inv.reduce((s,x)=>s+Number(x.expected_selling_price||x.valuation_mid||x.valuation||0),0))}</b></div><div class="card metric"><span class="muted">Sales</span><b>${money(orders.reduce((s,x)=>s+Number(x.total_amount||x.sale_price||0),0))}</b></div></div></div>`)}
 async function pageMoney(){let summary=null;try{summary=await edge(SWISH.functions.ebayFinanceSummary,{})}catch(e){}const [fees,orders,payouts]=await Promise.all([safeTable('fees',{limit:500}),safeTable('orders',{limit:500}),safeTable('payouts',{limit:500})]);replaceView(`<div class="card"><h2>Money</h2><pre class="pre">${esc(JSON.stringify(summary,null,2))}</pre><div class="grid"><div class="card metric"><span class="muted">Orders</span><b>${money(orders.reduce((s,x)=>s+Number(x.total_amount||x.total||0),0))}</b></div><div class="card metric"><span class="muted">Fees</span><b>${money(fees.reduce((s,x)=>s+Number(x.amount||x.fee_amount||0),0))}</b></div><div class="card metric"><span class="muted">Payouts</span><b>${money(payouts.reduce((s,x)=>s+Number(x.amount||0),0))}</b></div></div></div>`)}
-async function pageTasks(){const rows=await safeTable('tasks',{limit:500,order:{column:'created_at',ascending:false}});replaceView(`<div class="card"><h2>Tasks</h2><div class="toolbar"><button class="btn primary" id="newTask">New task</button></div>${rows.map(t=>`<div class="row"><button class="btn" data-task="${esc(t.id)}">${t.status==='completed'?'â':'â'}</button><div class="grow"><div class="title">${esc(t.title)}</div><div class="muted">${esc(t.priority||'medium')} Â· ${date(t.due_date)}</div></div></div>`).join('')||'<div class="empty">No tasks.</div>'}</div>`);const newTask=document.querySelector('#newTask'); if(newTask)newTask.onclick=async()=>{const title=prompt('Task title');if(!title)return;try{await insert('tasks',{title,status:'open',priority:'medium'});toast('Task created');pageTasks()}catch(e){toast(e.message,true)}};document.querySelectorAll('[data-task]').forEach(b=>b.onclick=async()=>{const t=rows.find(x=>x.id===b.dataset.task);try{await update('tasks',t.id,{status:t.status==='completed'?'open':'completed',completed_at:t.status==='completed'?null:new Date().toISOString()});pageTasks()}catch(e){toast(e.message,true)}})}
-async function pageCommand(){const inv=await safeTable('inventory',{limit:1000});replaceView(`<div class="card"><h2>Command Centre</h2><div class="grid"><div class="card metric"><span class="muted">Inventory</span><b>${inv.length}</b></div><div class="card metric"><span class="muted">Backend</span><b>ONLINE</b></div></div><div class="toolbar"><button class="btn primary" id="cmdSync">Sync inventory</button><button class="btn" id="cmdOrders">Sync orders</button><button class="btn" id="cmdListings">Sync listings</button><button class="btn" id="cmdIdentify">Batch identify</button><button class="btn" id="cmdReprice">Reprice all</button></div>
+async function pageTasks(){const rows=await safeTable('tasks',{limit:500,order:{column:'created_at',ascending:false}});replaceView(`<div class="card"><h2>Tasks</h2><div class="toolbar"><button class="btn primary" id="newTask">New task</button></div>${rows.map(t=>`<div class="row"><button class="btn" data-task="${esc(t.id)}">${t.status==='completed'?'✓':'○'}</button><div class="grow"><div class="title">${esc(t.title)}</div><div class="muted">${esc(t.priority||'medium')} · ${date(t.due_date)}</div></div></div>`).join('')||'<div class="empty">No tasks.</div>'}</div>`);const newTask=document.querySelector('#newTask'); if(newTask)newTask.onclick=async()=>{const title=prompt('Task title');if(!title)return;try{await insert('tasks',{title,status:'open',priority:'medium'});toast('Task created');pageTasks()}catch(e){toast(e.message,true)}};document.querySelectorAll('[data-task]').forEach(b=>b.onclick=async()=>{const t=rows.find(x=>x.id===b.dataset.task);try{await update('tasks',t.id,{status:t.status==='completed'?'open':'completed',completed_at:t.status==='completed'?null:new Date().toISOString()});pageTasks()}catch(e){toast(e.message,true)}})}
+async function pageCommand(){const inv=await safeTable('items',{limit:1000});replaceView(`<div class="card"><h2>Command Centre</h2><div class="grid"><div class="card metric"><span class="muted">Inventory</span><b>${inv.length}</b></div><div class="card metric"><span class="muted">Backend</span><b>ONLINE</b></div></div><div class="toolbar"><button class="btn primary" id="cmdSync">Sync inventory</button><button class="btn" id="cmdOrders">Sync orders</button><button class="btn" id="cmdListings">Sync listings</button><button class="btn" id="cmdIdentify">Batch identify</button><button class="btn" id="cmdReprice">Reprice all</button></div>
     <div class="card"><h3>AI / Learning Engine controls</h3><p class="muted">These buttons call the existing SWISH specialist/learning layers. They do not contain an AI provider key in the browser.</p>
       <div class="toolbar"><input id="engineItem" placeholder="Existing inventory item ID"><button class="btn primary" id="engReId">Identify / Re-ID</button><button class="btn" id="engIslamic">Islamic / Countermark</button><button class="btn" id="engValue">Market value</button><button class="btn" id="engDecompose">Decompose</button></div>
     </div><div id="cmdOut"></div></div>`);
@@ -916,7 +991,7 @@ function showBackendUnavailable(target,title,fn){
     <p class="muted">No replacement backend has been created. CSV import uses the separate existing <code>ebay-import-csv</code> function.</p></div>`;
 }
 async function runAction(fnKey,payload,msg,target){
-  const fn=SWISH.functions[fnKey]||fnKey;const el=document.querySelector('#'+target);if(!fn){showBackendUnavailable(target,String(fnKey),'missing backend function');return null;}if(el)el.innerHTML='<div class="empty"><div class="spinner"></div>Workingâ¦</div>';
+  const fn=SWISH.functions[fnKey]||fnKey;const el=document.querySelector('#'+target);if(!fn){showBackendUnavailable(target,String(fnKey),'missing backend function');return null;}if(el)el.innerHTML='<div class="empty"><div class="spinner"></div>Working…</div>';
   try{const d=await edge(fn,payload);if(el)el.innerHTML=`<div class="success">${esc(msg)}<pre class="pre">${esc(JSON.stringify(d,null,2))}</pre></div>`;else toast(msg);return d}catch(e){if(el)el.innerHTML=`<div class="error">${esc(e.message)}</div>`;else toast(e.message,true)}
 }
 async function runEdgeToast(fn,payload,msg){try{const d=await edge(fn,payload);toast(msg);return d}catch(e){toast(e.message,true)}}
