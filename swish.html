@@ -2,56 +2,66 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#07090f">
-  <title>SWISH — Coin Capture Station</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#10151f">
+  <title>SWISH — Seller Intelligence</title>
+  <meta name="description" content="SWISH seller intelligence workspace powered by the existing OnSpace backend.">
   <style>
-:root{--bg:#07090f;--panel:#10131b;--line:#272c38;--text:#f2f6ff;--muted:#8790a3;--accent:#4f8ff7;--good:#39d39a;--bad:#ff6b7a}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}.main{max-width:960px;margin:auto;padding:16px 14px 60px}.top,.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.top{border-bottom:1px solid var(--line);padding:6px 0 15px;margin-bottom:14px}.brand{font-size:29px;font-weight:950}.brand span{color:var(--accent)}.status,.muted{color:var(--muted);font-size:12px}.conn{font-size:12px;color:var(--muted);white-space:nowrap}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ffbf69;margin-right:6px}.dot.good{background:var(--good)}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px}h2{margin:0 0 6px;font-size:20px}h3{margin:10px 0}.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}input,textarea{font:inherit;background:#0b0f16;color:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;width:100%;min-width:0}label{display:block;color:#c7cede;font-size:12px;margin:8px 0}label input,label textarea{display:block;margin-top:6px}button{font:inherit;cursor:pointer;border:1px solid var(--line);background:#181d27;color:#fff;border-radius:11px;padding:10px 14px;font-weight:650}.btn.primary{background:var(--accent);border-color:var(--accent);color:#07111f}.btn.good{background:#113a2d;border-color:#287c5b}.btn:disabled{opacity:.45;cursor:not-allowed}.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.coin-preview{display:block;width:100%;max-height:320px;object-fit:contain;margin-top:8px;background:#050607;border-radius:12px}.assessment{margin-top:14px;border-top:1px solid var(--line);padding-top:10px;overflow-wrap:anywhere}.assessment pre{white-space:pre-wrap;word-break:break-word;background:#090c12;padding:10px;border-radius:10px;font-size:11px;max-height:240px;overflow:auto}.success,.error{padding:10px;border-radius:10px;margin-top:10px;font-size:13px}.success{background:#123c31;color:#70e4bc}.error{background:#35151d;color:#ffacb5}.footer{padding:10px 2px} [hidden]{display:none!important}@media(max-width:620px){.main{padding:12px 10px 35px}.two,.grid{grid-template-columns:1fr}.section-head{align-items:flex-start}.top{align-items:flex-start}.toolbar>*{flex:1 1 100%}.coin-preview{max-height:250px}}
+    :root{color-scheme:dark;--bg:#0b0f16;--panel:#121925;--panel2:#182232;--line:#293548;--text:#f2f5fa;--muted:#9ba8ba;--accent:#e6b94f;--good:#38c98b;--bad:#f16b73;--blue:#70a8ff;--radius:15px}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(ellipse at top,#172234 0,#0b0f16 56%);color:var(--text);font:15px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}
+    button,input,select,textarea{font:inherit}
+    button{cursor:pointer}
+    .app{min-height:100vh;padding:0 0 78px}
+    .main{max-width:1440px;margin:0 auto;padding:22px clamp(12px,3vw,34px) 42px}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:4px 0 18px;border-bottom:1px solid var(--line)}
+    .brand{font-size:25px;font-weight:850;letter-spacing:-.6px;color:var(--accent)}
+    .status,.muted,.small{color:var(--muted)}.status{font-size:12px;margin-top:3px}
+    .topright{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+    .niche-label{font-size:12px;color:var(--muted)}
+    .niche-select{width:auto;min-width:110px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;color:var(--text)}
+    .conn{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+    .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#778398}.dot.good{background:var(--good)}
+    .nav{display:flex;gap:7px;overflow:auto;padding:14px 0 18px;scrollbar-width:thin}
+    .nav button,.bottom button{border:1px solid transparent;background:transparent;color:var(--muted);padding:10px 13px;border-radius:10px;white-space:nowrap}
+    .nav button.active,.bottom button.active{color:var(--text);background:#283449;border-color:#3a4a62}
+    #view{min-height:300px}
+    .card{background:linear-gradient(145deg,rgba(23,32,47,.98),rgba(17,24,36,.98));border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:14px;min-width:0;box-shadow:0 12px 28px rgba(0,0,0,.12)}
+    .card .card{background:rgba(8,13,21,.3);box-shadow:none}
+    h1,h2,h3,h4{line-height:1.2;margin:0 0 12px}h2{font-size:22px}h3{font-size:17px}p{margin:8px 0 12px}
+    .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .four{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:14px}
+    .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    .metric{margin:0;padding:15px;display:flex;flex-direction:column;gap:5px}.metric b{font-size:25px}
+    .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .btn{border:1px solid #3b4960;border-radius:10px;background:#202c3e;color:var(--text);padding:9px 12px;min-height:38px}
+    .btn:hover{filter:brightness(1.13)}.btn.primary{background:var(--accent);color:#1a1a18;border-color:var(--accent);font-weight:750}
+    .btn.good{background:#123d32;border-color:#226d54}.btn.bad{background:#48232a;border-color:#74333b}
+    input,select,textarea{width:100%;min-width:0;border:1px solid #35445a;background:#0c121c;color:var(--text);border-radius:9px;padding:10px 11px;outline:none}
+    input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 2px #70a8ff20}
+    input[type=file]{padding:9px}textarea{min-height:100px;resize:vertical}
+    label{display:block;margin:0 0 6px}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;border-bottom:1px solid var(--line)}
+    .row:last-child{border-bottom:0}.grow{flex:1;min-width:0}.title{font-weight:700;overflow-wrap:anywhere}.price{font-weight:750;color:var(--accent);white-space:nowrap}
+    .tag{display:inline-block;border:1px solid #3b4960;border-radius:999px;padding:3px 8px;margin:5px 5px 0 0;color:var(--muted);font-size:11px}
+    .tabs{display:flex;gap:6px;overflow:auto;margin:12px 0}.tabs button{background:#111925;border:1px solid var(--line);border-radius:9px;padding:8px 12px;color:var(--muted);white-space:nowrap}.tabs button.active{background:#29364a;color:var(--text)}
+    .empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed #3a4658;border-radius:12px}
+    .error,.success{padding:12px 14px;border-radius:10px;overflow-wrap:anywhere;margin:10px 0}.error{background:#3c1e27;border:1px solid #74343f;color:#ffd7dc}.success{background:#12352d;border:1px solid #28664f;color:#d7fff0}
+    .pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px;overflow:auto;background:#080c12;border:1px solid var(--line);border-radius:9px;padding:12px;font-size:12px}
+    .table-wrap{overflow:auto;max-width:100%}.tbl{border-collapse:collapse;width:100%;font-size:13px;min-width:620px}.tbl th,.tbl td{text-align:left;border-bottom:1px solid var(--line);padding:10px 9px;vertical-align:top}.tbl th{color:var(--muted);font-weight:600}.right{text-align:right!important}
+    .thumbgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:9px}.thumbgrid img{display:block;width:100%;height:120px;object-fit:contain;background:#080c12;border:1px solid var(--line);border-radius:9px}
+    .drop{display:block;text-align:center;padding:28px;border:1px dashed #52627a;border-radius:12px;background:#0d1420;cursor:pointer}.hidden{display:none}
+    .login{max-width:540px;margin:9vh auto}.spinner{width:22px;height:22px;border:3px solid #4b5a70;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 9px}@keyframes spin{to{transform:rotate(360deg)}}
+    .toast{position:fixed;z-index:99;bottom:88px;left:50%;transform:translateX(-50%);max-width:calc(100% - 24px);padding:12px 16px;background:#26354a;border:1px solid #52627a;border-radius:12px;box-shadow:0 10px 35px #0008}.toast.error{background:#48232a}
+    .bottom{display:none}
+    @media(max-width:850px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.four{grid-template-columns:repeat(2,minmax(0,1fr))}.main{padding-top:12px}.top{align-items:flex-start}.topright{max-width:58%}.conn{width:100%;justify-content:flex-end}.nav{padding-top:10px}}
+    @media(max-width:600px){.main{padding:12px 10px 28px}.top{gap:8px}.brand{font-size:21px}.status{max-width:190px}.topright{gap:6px}.niche-label{display:none}.niche-select{min-width:95px;padding:8px}.nav{display:none}.bottom{display:block;position:fixed;z-index:20;bottom:0;left:0;right:0;padding:7px 6px calc(7px + env(safe-area-inset-bottom));background:#0c111aee;backdrop-filter:blur(16px);border-top:1px solid var(--line)}.bottomin{display:flex;gap:2px;overflow:auto;justify-content:space-between}.bottom button{font-size:11px;padding:9px 7px;flex:1}.card{padding:14px;margin-bottom:10px}.two{grid-template-columns:1fr}.grid{gap:8px}.metric{padding:12px}.metric b{font-size:22px}.row{align-items:flex-start}.toolbar .btn{flex:0 0 auto}.login{margin:7vh 0}.toast{bottom:86px}}
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <div id="app">
-    <main class="main">
-      <header class="top">
-        <div><div class="brand">S<span>WISH</span></div><div class="status">Coin Capture Station · existing SWISH backend</div></div>
-        <div id="connection" class="conn">Connecting…</div>
-      </header>
-      <section class="card" id="loginCard">
-        <h2>Sign in</h2>
-        <p class="muted">Use your existing SWISH account. No separate database or eBay credentials are stored in this page.</p>
-        <div class="toolbar"><input id="email" type="email" autocomplete="username" placeholder="Email"><input id="password" type="password" autocomplete="current-password" placeholder="Password"><button class="btn primary" id="loginBtn">Sign in</button></div>
-        <div id="loginMessage"></div>
-      </section>
-      <section class="card" id="captureCard" hidden>
-        <div class="section-head"><div><h2>Capture a coin</h2><p class="muted">Photograph both sides, record measurements, identify, value, then review before saving.</p></div><button class="btn" id="logoutBtn">Sign out</button></div>
-        <div class="two">
-          <div>
-            <label for="obverseFile">Obverse image</label><input id="obverseFile" type="file" accept="image/*" capture="environment">
-            <img id="obversePreview" class="coin-preview" alt="Obverse preview" hidden>
-          </div>
-          <div>
-            <label for="reverseFile">Reverse image</label><input id="reverseFile" type="file" accept="image/*" capture="environment">
-            <img id="reversePreview" class="coin-preview" alt="Reverse preview" hidden>
-          </div>
-        </div>
-        <div class="grid fields">
-          <label>Weight (g)<input id="weight" type="number" min="0" step="0.01" placeholder="e.g. 5.10"></label>
-          <label>Diameter (mm)<input id="diameter" type="number" min="0" step="0.1" placeholder="e.g. 25"></label>
-          <label>Metal / material<input id="metal" placeholder="Unknown, silver, copper…"></label>
-          <label>Notes / visible lettering<textarea id="notes" rows="2" placeholder="Marks, script, mint, provenance, observations…"></textarea></label>
-        </div>
-        <div class="toolbar">
-          <button class="btn primary" id="identifyBtn">Identify coin</button>
-          <button class="btn" id="valueBtn">Estimate value</button>
-          <button class="btn good" id="saveBtn">Save reviewed coin</button>
-        </div>
-        <div id="actionMessage"></div>
-        <div id="assessment" class="assessment" hidden></div>
-      </section>
-      <footer class="muted footer">SWISH Capture Station · existing OnSpace/Supabase-compatible backend · identification and valuation are suggestions until reviewed.</footer>
-    </main>
-  </div>
-  <script src="swish.js?v=20261014-1"></script>
+  <div id="app"><main class="main"><div class="card"><div class="brand">SWISH</div><p class="muted">Loading your existing SWISH workspace…</p><div class="spinner"></div></div></main></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="./swish.js?v=20261014-fullswish"></script>
 </body>
 </html>
