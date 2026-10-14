@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07090f">
+  <title>SWISH — Coin Capture Station</title>
+  <style>
+:root{--bg:#07090f;--panel:#10131b;--line:#272c38;--text:#f2f6ff;--muted:#8790a3;--accent:#4f8ff7;--good:#39d39a;--bad:#ff6b7a}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}.main{max-width:960px;margin:auto;padding:16px 14px 60px}.top,.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.top{border-bottom:1px solid var(--line);padding:6px 0 15px;margin-bottom:14px}.brand{font-size:29px;font-weight:950}.brand span{color:var(--accent)}.status,.muted{color:var(--muted);font-size:12px}.conn{font-size:12px;color:var(--muted);white-space:nowrap}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ffbf69;margin-right:6px}.dot.good{background:var(--good)}.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px}h2{margin:0 0 6px;font-size:20px}h3{margin:10px 0}.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}input,textarea{font:inherit;background:#0b0f16;color:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;width:100%;min-width:0}label{display:block;color:#c7cede;font-size:12px;margin:8px 0}label input,label textarea{display:block;margin-top:6px}button{font:inherit;cursor:pointer;border:1px solid var(--line);background:#181d27;color:#fff;border-radius:11px;padding:10px 14px;font-weight:650}.btn.primary{background:var(--accent);border-color:var(--accent);color:#07111f}.btn.good{background:#113a2d;border-color:#287c5b}.btn:disabled{opacity:.45;cursor:not-allowed}.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.coin-preview{display:block;width:100%;max-height:320px;object-fit:contain;margin-top:8px;background:#050607;border-radius:12px}.assessment{margin-top:14px;border-top:1px solid var(--line);padding-top:10px;overflow-wrap:anywhere}.assessment pre{white-space:pre-wrap;word-break:break-word;background:#090c12;padding:10px;border-radius:10px;font-size:11px;max-height:240px;overflow:auto}.success,.error{padding:10px;border-radius:10px;margin-top:10px;font-size:13px}.success{background:#123c31;color:#70e4bc}.error{background:#35151d;color:#ffacb5}.footer{padding:10px 2px} [hidden]{display:none!important}@media(max-width:620px){.main{padding:12px 10px 35px}.two,.grid{grid-template-columns:1fr}.section-head{align-items:flex-start}.top{align-items:flex-start}.toolbar>*{flex:1 1 100%}.coin-preview{max-height:250px}}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div id="app">
+    <main class="main">
+      <header class="top">
+        <div><div class="brand">S<span>WISH</span></div><div class="status">Coin Capture Station · existing SWISH backend</div></div>
+        <div id="connection" class="conn">Connecting…</div>
+      </header>
+      <section class="card" id="loginCard">
+        <h2>Sign in</h2>
+        <p class="muted">Use your existing SWISH account. No separate database or eBay credentials are stored in this page.</p>
+        <div class="toolbar"><input id="email" type="email" autocomplete="username" placeholder="Email"><input id="password" type="password" autocomplete="current-password" placeholder="Password"><button class="btn primary" id="loginBtn">Sign in</button></div>
+        <div id="loginMessage"></div>
+      </section>
+      <section class="card" id="captureCard" hidden>
+        <div class="section-head"><div><h2>Capture a coin</h2><p class="muted">Photograph both sides, record measurements, identify, value, then review before saving.</p></div><button class="btn" id="logoutBtn">Sign out</button></div>
+        <div class="two">
+          <div>
+            <label for="obverseFile">Obverse image</label><input id="obverseFile" type="file" accept="image/*" capture="environment">
+            <img id="obversePreview" class="coin-preview" alt="Obverse preview" hidden>
+          </div>
+          <div>
+            <label for="reverseFile">Reverse image</label><input id="reverseFile" type="file" accept="image/*" capture="environment">
+            <img id="reversePreview" class="coin-preview" alt="Reverse preview" hidden>
+          </div>
+        </div>
+        <div class="grid fields">
+          <label>Weight (g)<input id="weight" type="number" min="0" step="0.01" placeholder="e.g. 5.10"></label>
+          <label>Diameter (mm)<input id="diameter" type="number" min="0" step="0.1" placeholder="e.g. 25"></label>
+          <label>Metal / material<input id="metal" placeholder="Unknown, silver, copper…"></label>
+          <label>Notes / visible lettering<textarea id="notes" rows="2" placeholder="Marks, script, mint, provenance, observations…"></textarea></label>
+        </div>
+        <div class="toolbar">
+          <button class="btn primary" id="identifyBtn">Identify coin</button>
+          <button class="btn" id="valueBtn">Estimate value</button>
+          <button class="btn good" id="saveBtn">Save reviewed coin</button>
+        </div>
+        <div id="actionMessage"></div>
+        <div id="assessment" class="assessment" hidden></div>
+      </section>
+      <footer class="muted footer">SWISH Capture Station · existing OnSpace/Supabase-compatible backend · identification and valuation are suggestions until reviewed.</footer>
+    </main>
+  </div>
+  <script src="swish.js?v=20261014-1"></script>
+</body>
+</html>
