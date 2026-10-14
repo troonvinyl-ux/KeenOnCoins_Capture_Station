@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#10151f">
-  <title>SWISH — Seller Intelligence</title>
+  <meta name="theme-color" content="#08080b">
+  <title>Coin Flipper — SWISH</title>
   <meta name="description" content="SWISH seller intelligence workspace powered by the existing OnSpace backend.">
   <style>
     :root{color-scheme:dark;--bg:#0b0f16;--panel:#121925;--panel2:#182232;--line:#293548;--text:#f2f5fa;--muted:#9ba8ba;--accent:#e6b94f;--good:#38c98b;--bad:#f16b73;--blue:#70a8ff;--radius:15px}
@@ -56,6 +56,50 @@
     .bottom{display:none}
     @media(max-width:850px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.four{grid-template-columns:repeat(2,minmax(0,1fr))}.main{padding-top:12px}.top{align-items:flex-start}.topright{max-width:58%}.conn{width:100%;justify-content:flex-end}.nav{padding-top:10px}}
     @media(max-width:600px){.main{padding:12px 10px 28px}.top{gap:8px}.brand{font-size:21px}.status{max-width:190px}.topright{gap:6px}.niche-label{display:none}.niche-select{min-width:95px;padding:8px}.nav{display:none}.bottom{display:block;position:fixed;z-index:20;bottom:0;left:0;right:0;padding:7px 6px calc(7px + env(safe-area-inset-bottom));background:#0c111aee;backdrop-filter:blur(16px);border-top:1px solid var(--line)}.bottomin{display:flex;gap:2px;overflow:auto;justify-content:space-between}.bottom button{font-size:11px;padding:9px 7px;flex:1}.card{padding:14px;margin-bottom:10px}.two{grid-template-columns:1fr}.grid{gap:8px}.metric{padding:12px}.metric b{font-size:22px}.row{align-items:flex-start}.toolbar .btn{flex:0 0 auto}.login{margin:7vh 0}.toast{bottom:86px}}
+
+    /* Coin Flipper visual system */
+    :root{color-scheme:dark;--bg:#08080b;--panel:#111116;--panel2:#17171d;--line:#25252d;--text:#f5f0df;--muted:#77747d;--accent:#ffcf3f;--good:#38c98b;--bad:#f16b73;--blue:#4f8df7;--radius:27px}
+    body{background:#08080b;color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    .app{padding-bottom:108px}.main{max-width:1000px;padding:20px clamp(14px,4vw,38px) 42px}
+    .top{padding:16px 0 20px;border-bottom:1px solid #30260b;align-items:center}
+    .brand{font-size:clamp(21px,4vw,30px);font-weight:900;letter-spacing:2.5px;color:var(--accent);text-transform:uppercase}
+    .brand:before{content:'◉';display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;margin-right:13px;border:2px solid #71580c;border-radius:50%;background:#211900;color:var(--accent);font-size:23px;vertical-align:middle;letter-spacing:0}
+    .status{color:#82714a;text-transform:uppercase;letter-spacing:2px;font-size:10px}
+    .conn{display:none}.topright{max-width:45%}.niche-select{background:#211900;border:1px solid #70560b;color:var(--accent);border-radius:18px;font-weight:700}
+    .nav{border-bottom:1px solid #2e250d;padding:14px 0 17px;gap:10px}
+    .nav button{color:#88764b;font-weight:700;border-radius:18px;padding:12px 16px}
+    .nav button.active{background:#211900;color:var(--accent);border-color:#6e550c}
+    .card{background:#111116;border:1px solid #282830;border-radius:28px;box-shadow:none;padding:20px}
+    .card .card{background:#111116;border-color:#272730}
+    h1,h2,h3,h4{color:#f6f0df}h2{font-size:clamp(22px,4vw,30px);font-weight:850}h3{font-size:18px}
+    .btn{border:1px solid #6c530b;border-radius:15px;background:#211900;color:var(--accent);padding:10px 15px;font-weight:750}
+    .btn.primary{background:var(--accent);color:#171000;border-color:var(--accent)}
+    input,select,textarea{background:#111116;border:1px solid #292930;border-radius:18px;padding:14px;color:var(--text)}
+    .row{background:#111116;border:1px solid #272730;border-left:5px solid var(--accent);border-radius:27px;padding:18px;margin:12px 0;align-items:center}
+    .title{font-size:17px;font-weight:750}.tag{background:#292315;border-color:#3c3217;color:var(--accent);font-size:12px;padding:4px 10px}
+    .tabs{gap:8px;padding-bottom:5px}.tabs button{border-radius:24px;background:#111116;border:1px solid #292930;padding:11px 17px;font-weight:700}.tabs button.active{background:#211900;color:var(--accent);border-color:#8b6b10}
+    .grid{gap:12px}.metric{border-radius:22px}.metric b{color:var(--accent)}
+    .thumbgrid img{height:112px;border-radius:18px;background:#17171d;border:0}
+    .bottom{display:block;position:fixed;z-index:30;bottom:0;left:0;right:0;padding:9px 10px calc(9px + env(safe-area-inset-bottom));background:#111116f5;backdrop-filter:blur(18px);border-top:1px solid #25252d}
+    .bottomin{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;max-width:850px;margin:auto}
+    .bottom button{font-size:12px;padding:12px 5px 10px;min-height:64px;border-radius:16px;color:#686873;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-weight:700}
+    .bottom button:before{font-size:22px;line-height:1.1}.bottom button[data-go="dashboard"]:before{content:'◉'}.bottom button[data-go="identify"]:before{content:'▦'}.bottom button[data-go="inventory"]:before{content:'▣'}.bottom button[data-go="ebay"]:before{content:'▤'}
+    .bottom button.active{background:#192d4b;color:#4f8df7;border-color:transparent}
+    .empty{border-color:#3b321a;color:#958b71}.pre{background:#08080b;border-color:#292930}
+    @media(max-width:600px){.main{padding:10px 15px 24px}.top{padding:10px 0 17px}.brand{letter-spacing:1.5px}.brand:before{width:38px;height:38px;margin-right:10px}.topright{max-width:43%}.niche-select{min-width:88px;padding:8px 10px}.nav{display:flex;overflow:auto;margin:0 -15px;padding:12px 15px 16px}.nav button{font-size:12px;padding:10px 13px}.card{padding:16px;margin-bottom:12px}.bottom button{font-size:11px}.app{padding-bottom:100px}.two{grid-template-columns:1fr}}
+
+    .home-hero{min-height:500px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:38px 10px 52px}
+    .hero-mark{width:170px;height:170px;display:grid;place-items:center;color:var(--accent);font-size:90px;position:relative;margin-bottom:16px}
+    .hero-mark:before{content:'';position:absolute;inset:22px;border:6px solid var(--accent);border-top-color:transparent;border-bottom-color:transparent;border-radius:50%}
+    .hero-title{font-size:clamp(30px,6vw,54px);font-weight:950;letter-spacing:5px;color:var(--accent)}
+    .hero-sub{margin-top:22px;color:#9a8658;letter-spacing:3px;font-size:clamp(10px,2vw,15px)}
+    .pro-pill{margin-top:25px;border-radius:999px;padding:8px 28px;background:var(--accent);color:#171000;font-weight:900;letter-spacing:3px}
+    .home-tools{margin:0 0 24px}.section-kicker{font-weight:900;letter-spacing:2px;color:#8d7948;margin:0 0 16px}
+    .tool-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+    .tool-tile{min-height:150px;border:1px solid #3b300e;background:#100f09;border-radius:28px;color:#f2e8c8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:12px}
+    .tool-tile span{width:70px;height:70px;display:grid;place-items:center;border-radius:22px;background:#2b2100;color:var(--accent);font-size:34px;font-weight:900}
+    .tool-tile b{font-size:14px}.tool-tile:active{transform:scale(.98)}
+    @media(max-width:600px){.home-hero{min-height:430px;padding:25px 4px 40px}.hero-mark{width:150px;height:150px;font-size:78px}.hero-title{letter-spacing:3px}.hero-sub{letter-spacing:2px;line-height:1.8}.tool-grid{gap:10px}.tool-tile{min-height:130px;border-radius:24px}.tool-tile span{width:58px;height:58px;font-size:28px}.tool-tile b{font-size:12px}}
   </style>
 </head>
 <body>
