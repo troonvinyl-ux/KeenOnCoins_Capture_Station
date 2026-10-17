@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b1018">
+  <title>KeenOnCoins Capture Station · SWISH</title>
+  <meta name="description" content="Specialist coin capture and identification station connected to your existing SWISH backend.">
+  <link rel="stylesheet" href="./swish.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script defer src="./swish.js"></script>
+</head>
+<body>
+  <div id="fatal" class="fatal hidden" role="alert"></div>
+  <div id="app">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="KeenOnCoins Capture Station home">
+        <span class="brand-mark">K</span><span><strong>KeenOnCoins</strong><small>CAPTURE STATION</small></span>
+      </a>
+      <div class="top-actions">
+        <span id="connection" class="connection"><i></i><span>Connecting to SWISH…</span></span>
+        <button id="connectBtn" class="btn btn-quiet" type="button">Connect SWISH</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="intro">
+        <div>
+          <p class="eyebrow">SPECIALIST WORKBENCH</p>
+          <h1>Capture. Verify. Save.</h1>
+          <p class="intro-copy">Photograph both sides, enter the physical measurements, and run the existing SWISH coin-identification engine. Nothing is saved until you review and confirm it.</p>
+        </div>
+        <div class="backend-chip"><span class="pulse"></span><span>Existing SWISH backend</span><small>No new database</small></div>
+      </section>
+
+      <section id="loginPanel" class="panel login-panel hidden">
+        <div class="section-heading"><div><p class="eyebrow">ACCOUNT ACCESS</p><h2>Connect to SWISH</h2></div><span class="step-number">01</span></div>
+        <p class="muted">Sign in with the same SWISH account you use for your inventory. Your existing backend and database are retained.</p>
+        <form id="loginForm" class="login-form">
+          <label>Email<input id="loginEmail" type="email" autocomplete="username" required placeholder="you@example.com"></label>
+          <label>Password<input id="loginPassword" type="password" autocomplete="current-password" required placeholder="SWISH password"></label>
+          <button id="loginBtn" class="btn btn-primary" type="submit">Sign in to SWISH</button>
+        </form>
+        <div id="loginMessage" class="inline-message hidden"></div>
+      </section>
+
+      <section class="workspace">
+        <div class="main-column">
+          <section class="panel">
+            <div class="section-heading"><div><p class="eyebrow">01 / PHOTOGRAPHY</p><h2>Capture both sides</h2></div><span class="step-number">01</span></div>
+            <p class="muted">Use the device camera or choose existing photos. Keep the whole coin in frame and use even, neutral lighting.</p>
+            <div class="capture-grid">
+              <article class="capture-card">
+                <div class="capture-card-head"><div><h3>Obverse</h3><p>Front of coin</p></div><span id="obverseStatus" class="state-pill">Missing</span></div>
+                <div class="photo-frame" id="obverseFrame"><div class="coin-guide"><span></span></div><div class="frame-hint">OBVERSE PHOTO</div><img id="obversePreview" alt="Obverse preview" class="preview hidden"></div>
+                <div class="button-row">
+                  <button type="button" class="btn btn-secondary" data-photo="obverse">Choose photo</button>
+                  <button type="button" class="btn btn-quiet" data-clear="obverse">Clear</button>
+                </div>
+              </article>
+              <article class="capture-card">
+                <div class="capture-card-head"><div><h3>Reverse</h3><p>Back of coin</p></div><span id="reverseStatus" class="state-pill">Missing</span></div>
+                <div class="photo-frame" id="reverseFrame"><div class="coin-guide"><span></span></div><div class="frame-hint">REVERSE PHOTO</div><img id="reversePreview" alt="Reverse preview" class="preview hidden"></div>
+                <div class="button-row">
+                  <button type="button" class="btn btn-secondary" data-photo="reverse">Choose photo</button>
+                  <button type="button" class="btn btn-quiet" data-clear="reverse">Clear</button>
+                </div>
+              </article>
+            </div>
+            <div class="camera-tools">
+              <div class="camera-status"><span class="camera-dot"></span><span id="cameraMessage">Camera not running. You can still upload photos.</span></div>
+              <div class="button-row">
+                <button id="startCamera" type="button" class="btn btn-secondary">Start camera</button>
+                <button id="capturePhoto" type="button" class="btn btn-primary" disabled>Capture <span id="captureSide">OBVERSE</span></button>
+                <button id="switchSide" type="button" class="btn btn-quiet" disabled>Switch side</button>
+                <button id="stopCamera" type="button" class="btn btn-quiet" disabled>Stop</button>
+              </div>
+              <video id="camera" autoplay playsinline muted class="camera-video hidden"></video>
+              <canvas id="canvas" class="hidden"></canvas>
+              <input id="obverseInput" type="file" accept="image/*" capture="environment" class="hidden">
+              <input id="reverseInput" type="file" accept="image/*" capture="environment" class="hidden">
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-heading"><div><p class="eyebrow">02 / PHYSICAL EVIDENCE</p><h2>Measurements & observations</h2></div><span class="step-number">02</span></div>
+            <p class="muted">These details are sent to SWISH as known attributes. Identification should not override a material mismatch in the entered weight or diameter.</p>
+            <div class="field-grid">
+              <label>Weight <span class="unit">grams</span><input id="weight" type="number" inputmode="decimal" min="0" max="10000" step="0.01" placeholder="e.g. 7.77"></label>
+              <label>Diameter <span class="unit">millimetres</span><input id="diameter" type="number" inputmode="decimal" min="0" max="200" step="0.1" placeholder="e.g. 20.0"></label>
+              <label>Thickness <span class="unit">millimetres · optional</span><input id="thickness" type="number" inputmode="decimal" min="0" max="100" step="0.1" placeholder="Optional"></label>
+              <label>Observed metal <span class="unit">visual / test result</span><select id="metal"><option value="Unknown">Unknown / untested</option><option>Silver</option><option>Silver alloy</option><option>Gold</option><option>Electrum</option><option>Copper</option><option>Bronze</option><option>Brass</option><option>Billon</option><option>Potin</option><option>Lead</option><option>Iron</option><option>Other alloy</option></select></label>
+            </div>
+            <label class="full-label">Additional notes<textarea id="notes" rows="3" placeholder="Legend fragments, countermarks, colour, magnetic response, edge, provenance or anything unusual…"></textarea></label>
+            <div class="measurement-note"><span class="note-icon">i</span><span>Measurements are evidence, not decoration. Check them before accepting a candidate identification. Metal colour alone cannot confirm an alloy.</span></div>
+          </section>
+
+          <section class="panel action-panel">
+            <div class="section-heading"><div><p class="eyebrow">03 / SWISH INTELLIGENCE</p><h2>Identify this coin</h2></div><span class="step-number">03</span></div>
+            <p class="muted">Calls the existing <code>swish-identify</code> function. This station does not contain a separate AI model or API key.</p>
+            <div class="action-row">
+              <button id="identifyBtn" class="btn btn-primary btn-large" type="button" disabled><span class="button-icon">✦</span> Analyse with SWISH</button>
+              <button id="islamicBtn" class="btn btn-secondary btn-large" type="button" disabled>Islamic / countermark ID</button>
+              <button id="valueBtn" class="btn btn-secondary btn-large" type="button" disabled>Estimate value</button>
+            </div>
+            <div id="workStatus" class="work-status hidden"><span class="spinner"></span><span id="workStatusText">Working…</span></div>
+            <div id="errorPanel" class="notice notice-error hidden" role="alert"><strong id="errorTitle">Something went wrong</strong><p id="errorMessage"></p><pre id="errorDetail" class="error-detail hidden"></pre></div>
+          </section>
+        </div>
+
+        <aside class="side-column">
+          <section class="panel result-panel">
+            <div class="section-heading"><div><p class="eyebrow">REVIEW BEFORE SAVING</p><h2>Identification result</h2></div><span id="resultBadge" class="state-pill">Awaiting scan</span></div>
+            <div id="emptyResult" class="empty-result"><div class="empty-symbol">◎</div><h3>No identification yet</h3><p>Capture both sides, add measurements, then analyse the coin.</p></div>
+            <div id="resultContent" class="hidden">
+              <div class="result-title-wrap"><p class="eyebrow">LEADING CANDIDATE</p><h3 id="resultTitle">Unidentified coin</h3><div class="confidence-line"><span>Identification confidence</span><strong id="resultConfidence">—</strong></div><div class="confidence-track"><span id="confidenceBar"></span></div></div>
+              <dl id="resultDetails" class="result-details"></dl>
+              <div class="review-warning" id="reviewWarning">Review the identification against the measurements before saving.</div>
+              <div class="score-card"><div><span class="muted">Commercial score</span><p id="commercialReason">Score requires identification and reference evidence.</p></div><strong id="commercialScore">—</strong></div>
+              <div class="result-actions"><button id="saveBtn" type="button" class="btn btn-primary btn-large" disabled>Save reviewed coin to SWISH</button><button id="resetBtn" type="button" class="btn btn-quiet">Start another coin</button></div>
+              <div id="saveStatus" class="inline-message hidden"></div>
+            </div>
+          </section>
+
+          <section class="panel compact-panel">
+            <div class="section-heading"><div><p class="eyebrow">WORKFLOW</p><h2>Capture checklist</h2></div></div>
+            <ul class="checklist">
+              <li id="checkObverse"><span>1</span><div><strong>Obverse photo</strong><small>Clear, full coin visible</small></div><b>Pending</b></li>
+              <li id="checkReverse"><span>2</span><div><strong>Reverse photo</strong><small>Clear, full coin visible</small></div><b>Pending</b></li>
+              <li id="checkMeasurements"><span>3</span><div><strong>Physical measurements</strong><small>Weight and diameter preferred</small></div><b>Pending</b></li>
+              <li id="checkIdentification"><span>4</span><div><strong>Review identification</strong><small>Confirm candidate and evidence</small></div><b>Pending</b></li>
+              <li id="checkSaved"><span>5</span><div><strong>Save to SWISH</strong><small>Existing inventory table</small></div><b>Pending</b></li>
+            </ul>
+          </section>
+
+          <section class="panel compact-panel backend-panel">
+            <div class="section-heading"><div><p class="eyebrow">CONNECTION</p><h2>Backend status</h2></div></div>
+            <div class="backend-row"><span>Backend</span><strong>OnSpace / SWISH</strong></div>
+            <div class="backend-row"><span>Database</span><strong>Existing inventory</strong></div>
+            <div class="backend-row"><span>AI credentials</span><strong>Server-side only</strong></div>
+            <div class="backend-row"><span>eBay credentials</span><strong>Server-side only</strong></div>
+            <p class="tiny-note">This browser app uses the existing public client key and authenticated session. It never asks for or stores eBay, Gemini or Numista secrets.</p>
+          </section>
+        </aside>
+      </section>
+      <footer><span>KeenOnCoins Capture Station</span><span>Powered by your existing SWISH backend</span></footer>
+    </main>
+  </div>
+</body>
+</html>
