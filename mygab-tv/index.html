@@ -12,7 +12,7 @@ const $=id=>document.getElementById(id);
 const KEY='mygab-tv-config-v1';
 const defaults={keywords:['nature shorts','travel short videos','science facts shorts'],sources:[],items:[
 {title:'Big Buck Bunny — sample video',url:'https://www.youtube.com/watch?v=aqz-KE-bpKQ',embed:'https://www.youtube-nocookie.com/embed/aqz-KE-bpKQ?autoplay=1&mute=0&rel=0'},
-{title:'Sintel — sample video',url:'https://www.youtube.com/watch?v=について',embed:'https://www.youtube-nocookie.com/embed/2eMtWfG0l6w?autoplay=1&rel=0'},
+{title:'Sintel — sample video',url:'https://www.youtube.com/watch?v=2eMtWfG0l6w',embed:'https://www.youtube-nocookie.com/embed/2eMtWfG0l6w?autoplay=1&rel=0'},
 {title:'Elephants Dream — sample video',url:'https://www.youtube.com/watch?v=TLkA0_REL0s',embed:'https://www.youtube-nocookie.com/embed/TLkA0_REL0s?autoplay=1&rel=0'}
 ]};
 let config;try{config=JSON.parse(localStorage.getItem(KEY))||structuredClone(defaults)}catch(e){config=JSON.parse(JSON.stringify(defaults))}
