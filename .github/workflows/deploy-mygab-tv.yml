@@ -1,12 +1,21 @@
-name: Deploy MyGab TV
+name: Deploy Capture Station, MyGab TV and Job Diary
 
 on:
   push:
     branches: [main]
     paths:
+      - "index.html"
+      - "swish.css"
+      - "swish.js"
       - "mygab-tv/**"
       - ".github/workflows/deploy-mygab-tv.yml"
   workflow_dispatch:
+    inputs:
+      staff_rls_verified:
+        description: "Confirm Supabase RLS for jobs and job_actions has been tested to deny anonymous access"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -14,29 +23,81 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages-mygab-tv"
+  group: github-pages-combined-site
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Capture Station
         uses: actions/checkout@v4
-      - name: Configure Pages
+
+      - name: Prepare combined Pages site
+        run: |
+          mkdir -p site/mygab-tv site/job-diary
+          cp index.html swish.css swish.js site/
+          cp -R mygab-tv/. site/mygab-tv/
+          touch site/.nojekyll
+
+      - name: Checkout private Job Diary repository
+        uses: actions/checkout@v4
+        with:
+          repository: troonvinyl-ux/JobDiary
+          ref: main
+          token: ${{ secrets.JOBDIARY_READ_TOKEN }}
+          path: job-diary-source
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: job-diary-source/pnpm-lock.yaml
+
+      - name: Configure Job Diary for its Pages subpath
+        working-directory: job-diary-source
+        run: |
+          node -e "const fs=require('fs');const p='app.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.expo.experiments={...(j.expo.experiments||{}),baseUrl:'/KeenOnCoins_Capture_Station/job-diary'};fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n')"
+          test -f .env || (echo "Job Diary .env is missing; configure the existing public EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY for this build." >&2; exit 1)
+
+      - name: Build Job Diary web portal
+        working-directory: job-diary-source
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec expo export --platform web --output-dir dist
+          cp -R dist/. ../site/job-diary/
+          touch ../site/job-diary/.nojekyll
+
+      - name: Verify expected pages exist
+        run: |
+          test -s site/index.html
+          test -s site/mygab-tv/index.html
+          test -s site/job-diary/index.html
+          test -s site/job-diary/staff/index.html
+          test -s site/job-diary/staff/login/index.html
+
+      - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Upload MyGab TV static site
+
+      - name: Upload combined Pages site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "./mygab-tv"
+          path: ./site
 
   deploy:
+    if: ${{ github.event_name == 'push' || inputs.staff_rls_verified == true }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy combined site to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
