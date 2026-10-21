@@ -71,7 +71,7 @@ jobs:
         run: |
           # The private app's lockfile is stale versus package.json. Resolve from package.json in this CI workspace only.
           pnpm install --no-frozen-lockfile
-          pnpm exec expo export --platform web --output-dir dist
+          pnpm exec expo export --project-dir "$GITHUB_WORKSPACE/job-diary-source" --platform web --output-dir dist
           cp -R dist/. ../site/job-diary/
           touch ../site/job-diary/.nojekyll
 
