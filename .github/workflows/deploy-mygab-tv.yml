@@ -91,7 +91,7 @@ jobs:
           path: ./site
 
   deploy:
-    if: ${{ github.event_name == 'push' || inputs.staff_rls_verified == true }}
+    if: ${{ vars.STAFF_RLS_VERIFIED == 'true' || (github.event_name == 'workflow_dispatch' && inputs.staff_rls_verified == true) }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
