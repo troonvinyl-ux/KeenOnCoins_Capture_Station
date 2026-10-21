@@ -74,6 +74,12 @@ jobs:
           cd "$GITHUB_WORKSPACE/job-diary-source"
           echo "Expo project directory: $(pwd)"
           node -p '"main=" + require("./package.json").main'
+          # The parent Capture Station repository has its own Metro config.
+          # Temporarily move it aside so Expo uses the Job Diary project's config context.
+          if [ -f "$GITHUB_WORKSPACE/metro.config.js" ]; then
+            mv "$GITHUB_WORKSPACE/metro.config.js" "$RUNNER_TEMP/capture-station-metro.config.js"
+            trap 'mv "$RUNNER_TEMP/capture-station-metro.config.js" "$GITHUB_WORKSPACE/metro.config.js" 2>/dev/null || true' EXIT
+          fi
           node "$GITHUB_WORKSPACE/job-diary-source/node_modules/expo/bin/cli" export --platform web --output-dir dist
           cp -R dist/. ../site/job-diary/
           touch ../site/job-diary/.nojekyll
