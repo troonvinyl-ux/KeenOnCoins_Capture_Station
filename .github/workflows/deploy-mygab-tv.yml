@@ -51,7 +51,8 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10.4.1
+          # Let pnpm/action-setup read the exact packageManager version from JobDiary/package.json.
+          package_json_file: job-diary-source/package.json
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
