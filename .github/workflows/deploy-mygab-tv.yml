@@ -51,8 +51,7 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
-          # Let pnpm/action-setup read the exact packageManager version from JobDiary/package.json.
-          package_json_file: job-diary-source/package.json
+          version: 10.4.1
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -64,7 +63,7 @@ jobs:
       - name: Configure Job Diary for its Pages subpath
         working-directory: job-diary-source
         run: |
-          node -e "const fs=require('fs');const p='app.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.expo.experiments={...(j.expo.experiments||{}),baseUrl:'/KeenOnCoins_Capture_Station/job-diary'};fs.writeFileSync(p,JSON.stringify(j,null,2)+'\n')"
+          node -e "const fs=require('fs');const p='app.json';const j=JSON.parse(fs.readFileSync(p,'utf8'));j.expo.experiments={...(j.expo.experiments||{}),baseUrl:'/KeenOnCoins_Capture_Station/job-diary'};fs.writeFileSync(p,JSON.stringify(j,null,2)+'\\n')"
           test -f .env || (echo "Job Diary .env is missing; configure the existing public EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY for this build." >&2; exit 1)
 
       - name: Build Job Diary web portal
