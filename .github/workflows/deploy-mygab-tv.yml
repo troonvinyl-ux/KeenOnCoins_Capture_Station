@@ -74,7 +74,7 @@ jobs:
           cd "$GITHUB_WORKSPACE/job-diary-source"
           echo "Expo project directory: $(pwd)"
           node -p '"main=" + require("./package.json").main'
-          pnpm exec expo export --platform web --output-dir dist
+          node "$GITHUB_WORKSPACE/job-diary-source/node_modules/expo/bin/cli" export --platform web --output-dir dist
           cp -R dist/. ../site/job-diary/
           touch ../site/job-diary/.nojekyll
 
