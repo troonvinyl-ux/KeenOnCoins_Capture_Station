@@ -69,7 +69,8 @@ jobs:
       - name: Build Job Diary web portal
         working-directory: job-diary-source
         run: |
-          pnpm install --frozen-lockfile
+          # The private app's lockfile is stale versus package.json. Resolve from package.json in this CI workspace only.
+          pnpm install --no-frozen-lockfile
           pnpm exec expo export --platform web --output-dir dist
           cp -R dist/. ../site/job-diary/
           touch ../site/job-diary/.nojekyll
