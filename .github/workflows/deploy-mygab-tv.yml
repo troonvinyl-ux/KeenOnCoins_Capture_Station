@@ -71,6 +71,8 @@ jobs:
         run: |
           # The private app's lockfile is stale versus package.json. Resolve from package.json in this CI workspace only.
           pnpm install --no-frozen-lockfile
+          # Job Diary babel.config.js uses this Expo SDK 53 preset, but package.json does not declare it.
+          pnpm add --no-save babel-preset-expo@~13.0.0
           cd "$GITHUB_WORKSPACE/job-diary-source"
           echo "Expo project directory: $(pwd)"
           node -p '"main=" + require("./package.json").main'
