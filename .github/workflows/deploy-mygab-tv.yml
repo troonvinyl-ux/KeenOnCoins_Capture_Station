@@ -88,11 +88,14 @@ jobs:
 
       - name: Verify expected pages exist
         run: |
+          echo "Exported Job Diary HTML files:"
+          find site/job-diary -type f -name '*.html' -print | sort
           test -s site/index.html
           test -s site/mygab-tv/index.html
           test -s site/job-diary/index.html
-          test -s site/job-diary/staff/index.html
-          test -s site/job-diary/staff/login/index.html
+          # Expo static export may emit route HTML as staff.html or staff/index.html.
+          test -s site/job-diary/staff.html -o -s site/job-diary/staff/index.html
+          test -s site/job-diary/staff/login.html -o -s site/job-diary/staff/login/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
