@@ -7,6 +7,7 @@ on:
       - "index.html"
       - "swish.css"
       - "swish.js"
+      - "Firestick.html"
       - "mygab-tv/**"
       - ".github/workflows/deploy-mygab-tv.yml"
   workflow_dispatch:
@@ -35,8 +36,9 @@ jobs:
 
       - name: Prepare combined Pages site
         run: |
-          mkdir -p site/mygab-tv site/job-diary
+          mkdir -p site/mygab-tv site/job-diary site/swish
           cp index.html swish.css swish.js site/
+          cp Firestick.html site/swish/index.html
           cp -R mygab-tv/. site/mygab-tv/
           touch site/.nojekyll
 
