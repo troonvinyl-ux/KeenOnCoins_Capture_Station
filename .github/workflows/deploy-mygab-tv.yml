@@ -9,6 +9,7 @@ on:
       - "swish.js"
       - "Firestick.html"
       - "mygab-tv/**"
+      - "swish-landing/**"
       - ".github/workflows/deploy-mygab-tv.yml"
   workflow_dispatch:
     inputs:
@@ -38,10 +39,12 @@ jobs:
 
       - name: Prepare combined Pages site
         run: |
-          mkdir -p site/mygab-tv site/job-diary site/swish
+          mkdir -p site/mygab-tv site/job-diary site/swish site/swish-landing
           cp index.html swish.css swish.js site/
           cp Firestick.html site/swish/index.html
           cp Firestick.html site/swish.html
+          cp -R swish-landing/. site/swish-landing/
+          touch site/swish-landing/.nojekyll
           cp -R mygab-tv/. site/mygab-tv/
           touch site/.nojekyll
 
@@ -101,6 +104,12 @@ jobs:
           test -s site/index.html
           test -s site/mygab-tv/index.html
           test -s site/swish/index.html
+          test -s site/swish-landing/index.html
+          test -s site/swish-landing/coins/index.html
+          test -s site/swish-landing/motocross/index.html
+          test -s site/swish-landing/bicycles/index.html
+          test -s site/swish-landing/clothing/index.html
+          test -s site/swish-landing/surplus/index.html
           if [ "$INCLUDE_JOB_DIARY" = "true" ]; then
             echo "Exported Job Diary HTML files:"
             find site/job-diary -type f -name '*.html' -print | sort
